@@ -82,11 +82,9 @@ if !{defined PROFILE_RDP} {
   la_gp(t0, FinishFrame)
   ls_gp(sw t0, frame_callback)
 
-  lli a0, 0 // Run immediately
-  la_gp(a1, IntCallbackTask)
-// Tail call
-  j Scheduler.ScheduleTask
-  lli a2, int_cb_task
+  lli t0, 1
+  jr ra
+  sw t0, int_cb_needed (r0)
 
 FinishFrame:
   addi sp, 8

@@ -110,7 +110,7 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 
 - `scheduler.asm`: Cooperative scheduler for the CPU, using emulated cycle counts to sequence tasks.
 - `ucode_scheduler.asm`: Cooperative round robin scheduler for the RSP.
-- `intcb.asm`: The interrupt callback task, multiplexes the frame task with SI and PI callbacks, to avoid wasting scheduler time on many top-level tasks. This task either wants to run immediately (cycle 0) or never (cycle -1).
+- `intcb.asm`: The interrupt callback task, multiplexes the frame task with SI and PI callbacks, to avoid wasting scheduler time on many top-level tasks. This task doesn't schedule normally, it has its own flag (`intcb_needed`).
 - `frame.asm`: Frame task, the glue holding together the refresh loop. Controller polling, VI and RDP wait, RDP execution, menu rendering, profiling.
 
 ### Hardware interfacing

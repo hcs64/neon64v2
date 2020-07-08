@@ -23,25 +23,11 @@ Interrupt:
   beqz k0,+
   ls_gp(sw r0, pi_completion_vector)
 
-  ls_gp(sd a0, exception_regs + a0*8)
-  ls_gp(sd a1, exception_regs + a1*8)
-  ls_gp(sd a2, exception_regs + a2*8)
-  ls_gp(sd t0, exception_regs + t0*8)
-  ls_gp(sd ra, exception_regs + ra*8)
-
 // Schedule to run in the interrupt task
   ls_gp(sw k0, pi_callback)
+  lli k0, 1
+  sw k0, int_cb_needed (r0)
 
-  lli a0, 0 // Run immediately
-  la_gp(a1, IntCallbackTask)
-  jal Scheduler.ScheduleTask
-  lli a2, int_cb_task 
-
-  ls_gp(ld a0, exception_regs + a0*8)
-  ls_gp(ld a1, exception_regs + a1*8)
-  ls_gp(ld a2, exception_regs + a2*8)
-  ls_gp(ld t0, exception_regs + t0*8)
-  ls_gp(ld ra, exception_regs + ra*8)
 +
   jr k1
   ls_gp(sb r0, pi_interrupt_wait)

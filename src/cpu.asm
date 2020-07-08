@@ -1,9 +1,6 @@
 // TODO consider other values in regs:
 // - stack (could be ptr)
 
-// TODO CPU is having to yield when it equals another task's time, only to be immediately
-// allowed to run again. Try to find a way to avoid this.
-
 // Ref timing: http://nesdev.com/6502_cpu.txt
 
 //define LOG_CPU()

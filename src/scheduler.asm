@@ -13,10 +13,12 @@ begin_low_page()
 align(8)
 
 target_cycle:; dd 0
-task_times:; fill 8 * num_tasks
-task_ras:; fill 4 * num_tasks
+// No time or ra for int_cb_task
+task_times:; fill 8 * (num_tasks-1)
+task_ras:; fill 4 * (num_tasks-1)
 frame_cycles:; fill 4 * num_tasks
 frame_scheduler_cycles:; dw 0
+int_cb_needed:; dw 0
 running_task:; db 0
 
 align(4)
@@ -25,8 +27,8 @@ end_low_page()
 
 scope Scheduler {
 Init:
-  lli t1, (num_tasks-1) * 8
-  lli t2, (num_tasks-1) * 4
+  lli t1, (num_tasks-2) * 8
+  lli t2, (num_tasks-2) * 4
   daddi t0, r0, -1
   la_gp(t3, BadTask)
 
@@ -40,6 +42,8 @@ Init:
 
   sw r0, frame_scheduler_cycles (r0)
   move cycle_balance, r0
+
+  sw r0, int_cb_needed (r0)
 
   jr ra
   sd r0, target_cycle (r0)
@@ -74,7 +78,7 @@ print_schedule_loop:
 
   lbu t0, -8(sp)
 
-  lli t1, (num_tasks - 1) * 8
+  lli t1, (num_tasks - 2) * 8
   bne t1, t0, print_schedule_loop
   addi t0, 8
 
@@ -83,16 +87,20 @@ print_schedule_loop:
   addiu sp, -24
 }
 
+  lw temp0, int_cb_needed (r0)
+
 // Initially load with task 0.
-// This assumes task 0 is scheduled.
+// This assumes task 0 is always scheduled.
   ld earliest0, task_times + 0 * 8 (r0)
+  bnez temp0, run_int_cb
   lli earliest0_idx, 0
   ls_gp(ld earliest1, end_of_time)
 
   lli cur_idx, 8
 
 search_loop:
-  subi temp0, cur_idx, num_tasks * 8
+// Skip the last task (intcb) as it is checked explicitly above
+  subi temp0, cur_idx, (num_tasks-1) * 8
   bgez temp0, search_end
 
   ld temp0, task_times (cur_idx)
@@ -122,16 +130,22 @@ search_end:
   jr ra
   nop
 
+run_int_cb:
+  la_gp(temp0, IntCallbackTask)
+  j finish
+  lli earliest0_idx, int_cb_task
+
 any_task:
   sd earliest1, target_cycle (r0)
   dsub cycle_balance, earliest0, earliest1
-  lw t0, task_ras (earliest0_idx)
+  lw temp0, task_ras (earliest0_idx)
   srl earliest0_idx, 2
+finish:
   sb earliest0_idx, running_task (r0)
 
 if {defined LOG_SCHEDULER} {
   addiu sp, 8
-  sw t0, -8(sp)
+  sw temp0, -8(sp)
 
   jal PrintStr0
   la_gp(a0, schedulder_footer_msg)
@@ -148,18 +162,28 @@ if {defined LOG_SCHEDULER} {
   jal NewlineAndFlushDebug
   nop
 
-  lw t0, -8(sp)
+  lw temp0, -8(sp)
   addiu sp, -8
 }
-  lw t2, frame_scheduler_cycles (r0)
-  mfc0 t1, Count
+
+  lw temp1, frame_scheduler_cycles (r0)
+  mfc0 earliest0, Count
   mtc0 r0, Count
-  addu t2, t1
-  jr t0
-  sw t2, frame_scheduler_cycles (r0)
+  addu temp1, earliest0
+  jr temp0
+  sw temp1, frame_scheduler_cycles (r0)
 }
 
 YieldFromCPU:
+// CPU is task 0, if the balance is exactly 0 it would just be run again
+// immediately, so resume instead.
+  bnez cycle_balance, Yield
+// Unless the intcb task needs to run.
+  lw t0, int_cb_needed (r0)
+  bnez t0, Yield
+  nop
+  jr ra
+  nop
 Yield:
 // Reschedule ra as callback for a continuing task
   ld t0, target_cycle  (r0)
@@ -241,9 +265,9 @@ FinishTask:
   j NoTasks
   nop
 
-FinishTaskAlreadyUnscheduled:
+FinishIntCBTask:
 // Task has finished, doesn't need to be rescheduled now, and
-// has already unscheduled itself by writing -1 to its time.
+// has already unscheduled itself.
 // This is used for the interrupt callback task which has some careful atomic ops.
 // All we need to do is account for the time spent.
   lbu t2, running_task (r0)

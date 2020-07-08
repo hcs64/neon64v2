@@ -28,9 +28,9 @@ define NTSC_NES()
 fill 0x10'1000
 origin 0
 if {defined NTSC_NES} {
-N64_HEADER(Entrypoint, "Neon64 2.0-b.2")
+N64_HEADER(Entrypoint, "Neon64 2.0-WIP")
 } else if {defined PAL_NES} {
-N64_HEADER(Entrypoint, "Neon64 2.0-b.2PALNES")
+N64_HEADER(Entrypoint, "Neon64 2.0-WIPPALNES")
 }
 insert "lib/N64_BOOTCODE.BIN"
 
@@ -115,13 +115,13 @@ Start:
   jal Scheduler.Init
   nop
 
+  jal InitIntCallbacks
+  nop
+
   jal PI.Init
   nop
 
   jal SI.Init
-  nop
-
-  jal InitIntCallbacks
   nop
 
   jal Menu.Init
@@ -299,4 +299,11 @@ if {defined ERR_EMBED2} {
 align(8)
 err_embed_rom2:
   insert "{ERR_EMBED2}"
+}
+
+if 1 != 1 {
+origin 0x10'1000
+//insert ""
+
+align(512)
 }
