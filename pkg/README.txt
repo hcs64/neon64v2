@@ -63,8 +63,8 @@ savestates are not yet supported.
 Architecture
 ------------
 
-I split up the 6502 CPU ops to reduce code size; all N64 CPU code fits in ICache
-(1.5K to spare). All ucode fits in IMEM together (200 bytes to spare).
+I split up the 6502 CPU ops to reduce code size; all N64 CPU code fits in
+ICache. All ucode fits in IMEM together.
 
 The CPU runs the main PPU loop. It passes the bytes read to the RSP, which
 converts the background to a 4bpp texture and arranges sprites in an 8bpp
