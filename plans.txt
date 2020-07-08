@@ -1,0 +1,81 @@
+Architecture ideas:
+- Data layout should be more intentional, to understand how things
+  are colliding, e.g.:
+  * Jump tables shouldn't be embedded in code, or should be organized
+    as jumps instead of addresses (as in the opcode table).
+  * The most important things could be in memory that never gets evicted
+    (besides the register file). The biggest issue is dealing with the
+    random access pattern of the NES ROM. It might be possible to spread
+    that out to leave gaps in physical address space.
+- Rework the scheduler so the CPU can run more than 1 instruction ahead,
+  without having to yield constantly to allow other tasks to set interrupts.
+- dlists should be generated on the RSP to send to the RDP. This will
+  make some mid-frame effects easier.
+- If I want expansion audio, the RSP scheduler needs to swap ucode, and/or
+  I have to optimize for space.
+- Text rendering should use the RSP+RDP rather than uncached writes
+  on the CPU.
+
+Missing features needed for better accuracy:
+- Mid-frame palette changes
+- Mid-scanline BG changes (MMC2, fine X scroll change, etc)
+- BG-accurate SP0 hit
+- Bug-accurate Sprite overflow
+- Read of PPU activity
+- Audio IRQs (frame counter, DMC)
+- Palette deemphasis, greyscale
+- Proper screen size for PAL
+- Video signal parameters (slightly too narrow? starts too late?)
+
+Desired features:
+- Gameshark version
+- Controller 2
+- 4 player via Four Score
+- PAL NES mode switch at runtime
+- Proper text and profiling in PAL mode
+- Remember PAL setting per-game
+- Control remapping
+- Arkanoid paddle
+- Zapper
+- Reset, power cycle
+- PAL N64 mode
+- Unofficial CPU opcodes
+- Screenshots
+- Famicom Disk System
+- More mappers
+- NSF player (with mapper 31 this is pretty close)
+- Save to Controller Pak
+- Savestate (Expansion Pak, persistent)
+- Unlock framerate, fast-forward
+- Some NES 2.0 support?
+
+Desired mappers:
+Easy
+- 34 (Deadly Towers)
+- 11 (Color Dreams)
+- 66 (SMB+Duck Hunt)
+
+- 111 (homebrew, memblers)
+
+- 5 (MMC5, Castlevania 3, etc)
+- 9 (MMC2, Punch-Out!!)
+- 10 (MMC4, Fire Emblem, etc)
+- 19 (Namco 129/163, Pac-Man Championship Edition, etc)
+- 24 (VRC6a, Akumajou Densetsu)
+- 25 (VRC6b, Madara etc)
+- 64 (Tengen Rambo-1)
+- 68 (After Burner)
+- 69 (Sunsoft FME-7, Gimmick!, etc)
+
+Known bugs:
+- Streemerz uses a bad opcode (by design) after Faux logo
+- Bill & Ted palette messes up when dialog boxes come up. - Needs mid-frame palette change (also Wizards & Warriors)
+- Battletoads intro: a line of bad scroll (?) under the logo, during the quick
+  pan the planet sometimes flashes into the upper screen (check hw?)
+- Rad Racer - single lines out of place (check hw?)
+- Jurassic Park - Ocean logo on the title screen seems to have a few lines out of place (check hw?)
+- Pop when shooting sword in Zelda is irritatingly loud
+- Some audio glitching in Mega Man 2 intro (check hw?)
+- Black line over Kirby in pause screen - This is going to require better IRQ timing and maybe mid-scanline scroll
+- Marble Madness garbled text - Needs mid-scanline pattern addr switch.
+- Big Nose Freaks Out doesn't get in-game. Needs IRQ?

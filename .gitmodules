@@ -1,0 +1,3 @@
+[submodule "tools/bass-src"]
+	path = tools/bass-src
+	url = https://github.com/ARM9/bass
