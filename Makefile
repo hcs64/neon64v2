@@ -13,8 +13,9 @@ ntsc: $(TOOLS)
 	cd src ; $(NTSC_BASS_CMD)
 	$(CHKSUM64) neon64bu.rom
 
-ntsc_sym:
+ntsc-sym:
 	cd src ; $(NTSC_BASS_CMD) -sym neon64.sym
+	$(CHKSUM64) neon64bu.rom
 	sort src/neon64.sym > src/neon64.sym.sorted
 	mv src/neon64.sym.sorted src/neon64.sym
 
