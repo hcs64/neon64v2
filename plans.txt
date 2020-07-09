@@ -58,8 +58,6 @@ Easy
 - 111 (homebrew, memblers)
 
 - 5 (MMC5, Castlevania 3, etc)
-- 9 (MMC2, Punch-Out!!)
-- 10 (MMC4, Fire Emblem, etc)
 - 19 (Namco 129/163, Pac-Man Championship Edition, etc)
 - 24 (VRC6a, Akumajou Densetsu)
 - 25 (VRC6b, Madara etc)
@@ -77,3 +75,4 @@ Known bugs:
 - Pop when shooting sword in Zelda is irritatingly loud
 - Some audio glitching in Mega Man 2 intro (check hw?)
 - Big Nose Freaks Out doesn't get in-game. Needs IRQ?
+- A line is out of place on the Mike Tyson's Punch Out title screen

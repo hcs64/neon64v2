@@ -76,6 +76,12 @@ InitMapper9:
   jal WriteMapper9
   lli cpu_t1, 0xa000
 
+  jal Mapper9Latch0
+  lli t0, 0x0fd0
+
+  jal Mapper9Latch1
+  lli t0, 0xfd
+
   lw ra, -8 (sp)
   jr ra
   addi ra, -8
@@ -98,9 +104,6 @@ jump_table:
   dw prgrom_select, chrrom_fd_0, chrrom_fe_0, chrrom_fd_1, chrrom_fe_1, mirroring
 
 prgrom_select:
-  addi sp, 8
-  sw ra, -8 (sp)
-
   ls_gp(lbu t0, mapper9_prgrom_tlb_idx + 0)
   ls_gp(lw t1, prgrom_start_phys)
   ls_gp(lw t2, prgrom_mask)
@@ -109,12 +112,9 @@ prgrom_select:
   and a1, t2
   add a1, t1
 
-  jal TLB.Map8K
+// Tail call
+  j TLB.Map8K
   mtc0 t0, Index
-
-  lw ra, -8 (sp)
-  jr ra
-  addi sp, -8
 
 mirroring:
   andi cpu_t0, 1
@@ -129,6 +129,7 @@ chrrom_fd_0:
 chrrom_fe_0:
 chrrom_fd_1:
 chrrom_fe_1:
+// TODO PPU catchup?
   jr ra
   nop
 }

@@ -3,7 +3,8 @@
 //define LOG_SPRITES()
 //define DUMP_RGB_PALETTE()
 //define DUMP_VRAM()
-define MAPPER9()
+//define MAPPER9()
+define MAPPER10()
 
 begin_low_page()
 
@@ -114,6 +115,10 @@ Init:
 
 if {defined MAPPER9} {
   ls_gp(sh r0, mapper9_latch0)
+}
+if {defined MAPPER10} {
+  ls_gp(sb r0, mapper10_latch + 0)
+  ls_gp(sb r0, mapper10_latch + 1)
 }
 
 // Clear VRAM
@@ -508,15 +513,34 @@ if {height} == 8 {
 // Load sprite
   sll t1, 2
   add t1, a1
-  lbu t4, 0 (t1)  // Y
   lbu t8, 3 (t1)  // X
 
 // Store X
   dsll ppu_t2, 8
   or ppu_t2, t8
 
-  lb t3, 2 (t1)  // Attributes
   lbu t8, 1 (t1)  // Tile index
+
+// TODO I don't think this is needed?
+if {defined MAPPER10} {
+if {height} == 8 {
+  lli t4, 0xfd
+  beq t4,t8,+
+  lli t4, 0xfe
+  bne t4,t8,++
+  nop
++
+  srl t4, a3, 12
+  add t4, gp
+  sb t8, mapper10_latch - gp_base (t4)
++
+} else {
+  syscall 1
+}
+}
+
+  lb t3, 2 (t1)  // Attributes
+  lbu t4, 0 (t1)  // Y
 
 // Y flip (bit 7, sign)
   bgez t3,+
@@ -559,7 +583,6 @@ if {defined MAPPER9} {
   ls_gp(sh t4, mapper9_latch0)
 +
 }
-
   srl t8, t4, 10
   sll t8, 2
   lw t8, ppu_map (t8)
@@ -685,18 +708,24 @@ sprite_fetch_done:
   addi t3, 8
   ls_gp(sw t3, sp_x_pos)
 
-if {defined MAPPER9} {
-  ls_gp(lhu t0, mapper9_latch0)
-  beqz t0,+
-  nop
-  jal Mapper9Latch0
-  nop
-+
-}
-
 // ##### Begin background
   bgezal cycle_balance, Scheduler.Yield
   nop
+
+if {defined MAPPER9} {
+  jal Mapper9Latch0
+  ls_gp(lhu t0, mapper9_latch0)
+}
+if {defined MAPPER10} {
+  ls_gp(lbu t0, mapper10_latch + 0)
+  jal Mapper10Latch
+  lli t1, 0x0000
+
+  ls_gp(lbu t0, mapper10_latch + 1)
+  jal Mapper10Latch
+  lli t1, 0x1000
+}
+
 
 // Scanline counter, just before prefetch seems like the right place for this,
 // for MMC3 at least.
@@ -827,35 +856,47 @@ macro nt_at_fetch(bg_cycle_balance, nt_addr, pt_base, at_byte, nt_shift, at_shif
 // Fetch NT byte
   lbu t0, 0 ({nt_addr})
   daddi {bg_cycle_balance}, 8 * ppu_div
+  addi {nt_addr}, 1
 
-if {defined MAPPER9} {
+// Fetch PT bytes
+  sll t3, t0, 4
+  add t3, {pt_base}
+  srl t1, t3, 10
+  sll t1, 2
+  lw t1, ppu_map (t1)
+  dsll t2, {nt_shift}, 16
+  add t1, t3, t1
+  lbu t3, 0 (t1)
+  lbu t1, 8 (t1)
+  sll t3, 8
+  or t3, t1
+
+if {defined MAPPER9} || {defined MAPPER10} {
   lli t1, 0xfd
   beq t0, t1,+
   lli t1, 0xfe
   bne t0, t1,++
   nop
 +
+  addi sp, 16
+  sw t3, -8 (sp)
+  sd t2, -16 (sp)
+if {defined MAPPER9} {
   jal Mapper9Latch1
   nop
+}
+if {defined MAPPER10} {
+  jal Mapper10Latch
+  move t1, {pt_base}
+}
+  lw t3, -8 (sp)
+  ld t2, -16 (sp)
+  addi sp, -16
 +
 }
 
-  addi {nt_addr}, 1
-// Fetch PT bytes
-  sll t0, 4
-  add t0, {pt_base}
-  srl t1, t0, 10
-  sll t1, 2
-  lw t1, ppu_map (t1)
-  dsll t2, {nt_shift}, 16
-  add t1, t0, t1
-  lbu t0, 0 (t1)
-  lbu t1, 8 (t1)
-  sll t0, 8
-  or t0, t1
-
   bgezal {nt_shift}, {nt_full}
-  or {nt_shift}, t0, t2
+  or {nt_shift}, t3, t2
 
 // Select AT bits
   andi t0, {at_byte}, 0b11
@@ -1001,7 +1042,7 @@ bg_fetch_finish:
   sw r0, ppu_catchup_cb (r0)
 
 bg_fetch_flush:
-if {defined MAPPER9} {
+if {defined MAPPER9} || {defined MAPPER10} {
 // Tile 34
   andi t0, ppu_vaddr, 0b1100'0000'0000  // NT select
   srl t1, t0, 10-2
@@ -1017,8 +1058,16 @@ if {defined MAPPER9} {
   bne t0, t1,++
   nop
 +
+if {defined MAPPER9} {
   jal Mapper9Latch1
   nop
+}
+if {defined MAPPER10} {
+  lbu t1, ppu_ctrl (r0)
+  andi t1, 0b1'0000
+  jal Mapper10Latch
+  sll t1, 12-4
+}
 +
 }
 
