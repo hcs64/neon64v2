@@ -11,7 +11,7 @@ Features
 - PPU
 - APU channels (2 square, triangle, noise, DMC)
 - Battery backed RAM save to SRAM
-- iNES mappers #s 0,1,2,3,4,7,9,10,30,31,71
+- iNES mappers #s 0,1,2,3,4,7,30,31,71
 - Controller 1 (D-pad + analog)
 
 There's a lot missing, but it's already worlds better than 1.2.

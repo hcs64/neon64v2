@@ -32,6 +32,7 @@ Desired features:
 - Controller 2
 - 4 player via Four Score
 - PAL NES mode switch at runtime
+- Mapper 9 & 10 switch at runtime (overlay?)
 - Proper text and profiling in PAL mode
 - Remember PAL setting per-game
 - Control remapping
