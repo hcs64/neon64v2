@@ -1,6 +1,5 @@
 // TODO consider other values in regs:
 // - stack (could be ptr)
-// - nz (10% of instructions are BNE, according to Blargg)
 
 // TODO CPU is having to yield when it equals another task's time, only to be immediately
 // allowed to run again. Try to find a way to avoid this.
@@ -26,11 +25,8 @@ constant intMMC3(0x02)
 
 begin_low_page()
 
-nz_table:; fill 257
-
 align_dcache()
 cpu_mpc_base:;    dw 0
-cpu_nz_val:;      dh 0
 // These two are accessed together as a dh
 interrupt_pending:
 irq_pending:;     db 0
@@ -38,6 +34,8 @@ nmi_pending:;     db 0
 
 cpu_flags:;       db 0
 cpu_stack:;       db 0
+cpu_n_byte:;      db 0
+cpu_z_byte:;      db 0
 cpu_c_byte:;      db 0
 
 align(4)
@@ -77,12 +75,17 @@ macro get_pc(out_reg) {
 }
 
 macro get_flags(out_reg, tmp1, tmp2) {
-  lhu {tmp1}, cpu_nz_val (r0)
-  lbu {tmp2}, cpu_c_byte (r0)
+  lbu {tmp1}, cpu_z_byte (r0)
   lbu {out_reg}, cpu_flags (r0)
-  lbu {tmp1}, nz_table ({tmp1})
+  bnez {tmp1},+
+  lb {tmp1}, cpu_n_byte (r0)
+  ori {out_reg}, flagZ
++
+  lbu {tmp2}, cpu_c_byte (r0)
+  bgez {tmp1},+
   or {out_reg}, {tmp2}
-  or {out_reg}, {tmp1}
+  ori {out_reg}, flagN
++
 }
 
 FinishCycleAndFetchOpcode:
@@ -687,16 +690,25 @@ addr_w_iy:
 
 ex_ora:
   or cpu_acc, cpu_t1
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 
 ex_and:
   and cpu_acc, cpu_t1
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
+
+ex_eor:
+  xor cpu_acc, cpu_t1
+  sb cpu_acc, cpu_n_byte (r0)
+  j FinishCycleAndFetchOpcode
+  sb cpu_acc, cpu_z_byte (r0)
 
 ex_bit:
-  and t2, cpu_acc, cpu_t1
+  and t0, cpu_acc, cpu_t1
+  sb t0, cpu_z_byte (r0)
 
   lbu t0, cpu_flags (r0)
   andi t1, cpu_t1, flagV
@@ -704,25 +716,10 @@ ex_bit:
   or t0, t1
   sb t0, cpu_flags (r0)
 
-// Setting N is a little complicated when deferring NZ
+// flagN is 0x80, this will make signed cpu_z_byte negative if set
   andi t0, cpu_t1, flagN
-  beqz t0,+
-  nop
-
-  bnez t2,+
-  lli t2, 0x80
-
-// Both N and Z have to be set, use the special case
-  lli t2, 0x100
-
-+
   j FinishCycleAndFetchOpcode
-  sh t2, cpu_nz_val (r0)
-
-ex_eor:
-  xor cpu_acc, cpu_t1
-  j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb t0, cpu_n_byte (r0)
 
 scope ex_adc: {
 constant flags(t0)
@@ -749,8 +746,9 @@ constant overflow(t2)
   or flags, overflow
   sb flags, cpu_flags (r0)
 
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 }
 
 scope ex_sbc: {
@@ -782,14 +780,16 @@ constant result(t3)
 
   andi cpu_acc, result, 0xff
 
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 }
 
 macro ex_cmp_axy(evaluate reg) {
   sub t1, {reg}, cpu_t1
   andi t0, t1, 0xff
-  sh t0, cpu_nz_val (r0)
+  sb t0, cpu_n_byte (r0)
+  sb t0, cpu_z_byte (r0)
   sltiu t1, 0x100
   j FinishCycleAndFetchOpcode
   sb t1, cpu_c_byte (r0)
@@ -806,18 +806,21 @@ ex_cmp_axy(cpu_y)
 
 ex_lda:
   move cpu_acc, cpu_t1
+  sb cpu_t1, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_t1, cpu_z_byte (r0)
 
 ex_ldx:
   move cpu_x, cpu_t1
+  sb cpu_t1, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_x, cpu_nz_val (r0)
+  sb cpu_t1, cpu_z_byte (r0)
 
 ex_ldy:
   move cpu_y, cpu_t1
+  sb cpu_t1, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_y, cpu_nz_val (r0)
+  sb cpu_t1, cpu_z_byte (r0)
 
 // RMW execute
 // These will not yield or clobber cpu_t*
@@ -833,8 +836,9 @@ ex_asl:
   sll a0, 1
   andi a0, 0xff
   sb t0, cpu_c_byte (r0)
+  sb a0, cpu_n_byte (r0)
   jr ra
-  sh a0, cpu_nz_val (r0)
+  sb a0, cpu_z_byte (r0)
 
 ex_rol:
   lbu t0, cpu_c_byte (r0)
@@ -843,15 +847,17 @@ ex_rol:
   sb t1, cpu_c_byte (r0)
   andi a0, 0xff
   or a0, t0
+  sb a0, cpu_n_byte (r0)
   jr ra
-  sh a0, cpu_nz_val (r0)
+  sb a0, cpu_z_byte (r0)
 
 ex_lsr:
   andi t0, a0, 1
   sb t0, cpu_c_byte (r0)
   srl a0, 1
+  sb a0, cpu_n_byte (r0)
   jr ra
-  sh a0, cpu_nz_val (r0)
+  sb a0, cpu_z_byte (r0)
 
 ex_ror:
   lbu t0, cpu_c_byte (r0)
@@ -862,20 +868,23 @@ ex_ror:
   sll t0, 7
   or a0, t0
 
+  sb a0, cpu_n_byte (r0)
   jr ra
-  sh a0, cpu_nz_val (r0)
+  sb a0, cpu_z_byte (r0)
 
 ex_inc:
   addi a0, 1
   andi a0, 0xff
+  sb a0, cpu_n_byte (r0)
   jr ra
-  sh a0, cpu_nz_val (r0)
+  sb a0, cpu_z_byte (r0)
 
 ex_dec:
   addi a0, -1
   andi a0, 0xff
+  sb a0, cpu_n_byte (r0)
   jr ra
-  sh a0, cpu_nz_val (r0)
+  sb a0, cpu_z_byte (r0)
 
 // Accumulator operations
 
@@ -884,8 +893,9 @@ ex_asl_acc:
   sll cpu_acc, 1
   andi cpu_acc, 0xff
   sb cpu_t0, cpu_c_byte (r0)
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 
 ex_rol_acc:
 // cpu_t0: cpu_c_byte
@@ -894,15 +904,17 @@ ex_rol_acc:
   srl t0, cpu_acc, 8
   sb t0, cpu_c_byte (r0)
   andi cpu_acc, 0xff
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 
 ex_lsr_acc:
 // cpu_t0: cpu_acc & 1 (carry)
   sb cpu_t0, cpu_c_byte (r0)
   srl cpu_acc, 1
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 
 ex_ror_acc:
 // cpu_t0: cpu_c_byte
@@ -913,8 +925,9 @@ ex_ror_acc:
   sll t1, cpu_t0, 7
   or cpu_acc, t1
 
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 
 // Special operations
 
@@ -933,10 +946,10 @@ ex_php:
   j FinishCycleAndFetchOpcode
   sb cpu_t0, cpu_stack (r0)
 
-// uses t0, t1, t2, stack is in cpu_t0
-// after this macro you still need sh t2, cpu_nz_val (r0)
+// clobbers t0 and t1, stack pointer is in cpu_t0
 macro pull_flags() {
   lbu t0, nes_ram + 0x100 (cpu_t0)
+// Delay slot?
 
 // TODO as with ex_sei and ex_cli this should probably interface with the scheduler,
 // unless we're always expecting interrupts?
@@ -947,19 +960,13 @@ macro pull_flags() {
   andi t1, t0, flagC
   sb t1, cpu_c_byte (r0)
 
-// Setting N is a little complicated when deferring NZ
-  andi t2, t0, flagZ
-  xori t2, flagZ
+  andi t1, t0, flagZ
+  xori t1, flagZ
+  sb t1, cpu_z_byte (r0)
 
+// flagN is 0x80, this will make signed cpu_z_byte negative if set
   andi t1, t0, flagN
-  beqz t1,+ // if !N, Z^1 works
-  sb cpu_t0, cpu_stack (r0)
-  bnez t2,+ // if N and !Z, just use 0x80
-  lli t2, 0x80
-
-// Both N and Z have to be set, use the special case
-  lli t2, 0x100
-+
+  sb t1, cpu_n_byte (r0)
 }
 
 ex_plp:
@@ -969,12 +976,13 @@ ex_plp:
 // Cycle 3: Increment S
   addiu cpu_t0, 1
   andi cpu_t0, 0xff
-// Cycle 4: Pull P
+
   daddiu cycle_balance, cpu_div * 2
+// Cycle 4: Pull P
 
   pull_flags()
   j FinishCycleAndFetchOpcode
-  sh t2, cpu_nz_val (r0)
+  sb cpu_t0, cpu_stack (r0)
 
 ex_pha:
 // cpu_t0: cpu_stack
@@ -1004,8 +1012,9 @@ ex_pla:
   lbu cpu_acc, nes_ram + 0x100 (cpu_t0)
   sb cpu_t0, cpu_stack (r0)
 
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 
 ex_rti:
 // cpu_t0: cpu_stack
@@ -1017,7 +1026,6 @@ ex_rti:
 
 // Cycle 4: Pull flags, increment S
   pull_flags()
-  sh t2, cpu_nz_val (r0)
   addiu cpu_t0, 1
   andi cpu_t0, 0xff
 
@@ -1111,27 +1119,31 @@ ex_jsr:
 ex_transfer_acc:
 // The transfer has already been done, in all cases A has the transferred value
 // Cycle 2, set flags
+  sb cpu_acc, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_acc, cpu_nz_val (r0)
+  sb cpu_acc, cpu_z_byte (r0)
 
 ex_tsx:
 // The transfer is already done.
+  sb cpu_x, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_x, cpu_nz_val (r0)
+  sb cpu_x, cpu_z_byte (r0)
 
 ex_inx_dex:
 // The inc/dec has already been done, but hasn't been masked yet
 // Cycle 2, set flags
   andi cpu_x, 0xff
+  sb cpu_x, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_x, cpu_nz_val (r0)
+  sb cpu_x, cpu_z_byte (r0)
 
 // The inc/dec has already been done, but hasn't been masked yet
 ex_iny_dey:
 // Cycle 2, set flags
   andi cpu_y, 0xff
+  sb cpu_y, cpu_n_byte (r0)
   j FinishCycleAndFetchOpcode
-  sh cpu_y, cpu_nz_val (r0)
+  sb cpu_y, cpu_z_byte (r0)
 
 ex_jmp_abs:
 // cpu_t0: low address byte
@@ -1180,52 +1192,50 @@ ex_jmp_absi:
   set_pc_and_finish(cpu_t0, cpu_t1)
 
 ex_bmi:
-// cpu_t0: cpu_nz_val
-  subi cpu_t0, 0x80
-  bltz cpu_t0, FinishCycleAndFetchOpcode
+// cpu_t0: cpu_n_byte, signed
+// Delay slot?
+  bgez cpu_t0, FinishCycleAndFetchOpcode
   addiu cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
 ex_bpl:
-// cpu_t0: cpu_nz_val
-  subi cpu_t0, 0x80
-  bgez cpu_t0, FinishCycleAndFetchOpcode
+// cpu_t0: cpu_n_byte, signed
+// Delay slot?
+  bltz cpu_t0, FinishCycleAndFetchOpcode
   addiu cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
 ex_bcs:
 // cpu_t0: cpu_c_byte
+// Delay slot?
   beqz cpu_t0, FinishCycleAndFetchOpcode
   addiu cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
 ex_beq:
-// cpu_t0: cpu_nz_val
-  lli t0, 0x100
-  beq cpu_t0, t0,+
-  nop
+// cpu_t0: cpu_z_byte
+// Delay slot?
   bnez cpu_t0, FinishCycleAndFetchOpcode
-+;addiu cpu_mpc, 1
+  addiu cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
 ex_bcc:
 // cpu_t0: cpu_c_byte
+// Delay slot?
   bnez cpu_t0, FinishCycleAndFetchOpcode
   addiu cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
 ex_bne:
-// cpu_t0: cpu_nz_val
+// cpu_t0: cpu_z_byte
+// Delay slot?
   beqz cpu_t0, FinishCycleAndFetchOpcode
   addiu cpu_mpc, 1
-  lli t0, 0x100
-  beq cpu_t0, t0, FinishCycleAndFetchOpcode
-  nop
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1320,13 +1330,6 @@ ex_clv:
 print "CPU kernel is ", pc() - FinishCycleAndFetchOpcode, " bytes \n"
 
 // ****** Cold data
-
-nz_table_data:
-  db flagZ
-  fill 127, 0
-  fill 128, flagN
-  db flagZ|flagN  // this case can happen with BIT or PLP
-align(4)
 
 // TODO: this should be discarded after CPU is set up, if icache is an issue
 // NOTE: Does not set PC, to do that properly requires something mapped to the
@@ -1427,15 +1430,6 @@ scope InitCPU: {
   bnez t3,-
   addi t0, 4
 
-// Load NZ table into low page
-  la_gp(t0, nz_table_data + 256)
-  lli t1, 256
--;lbu t2, 0(t0)
-  sb t2, nz_table(t1)
-  addi t0, -1
-  bnez t1,-
-  addi t1, -1
-
 // Clear RAM
 // TODO: consider randomizing
   lli t0, nes_ram
@@ -1453,10 +1447,9 @@ scope InitCPU: {
   sb t0, cpu_stack (r0)
   lli t0, flag1 | flagI
   sb t0, cpu_flags (r0)
-
-  lli t0, 1 // not 0 or negative
-  sh t0, cpu_nz_val (r0)
-  sb r0, cpu_c_byte (r0)  // no carry
+  sb r0, cpu_n_byte (r0)
+  sb r0, cpu_z_byte (r0)
+  sb r0, cpu_c_byte (r0)
 
   sh r0, interrupt_pending(r0)
 
@@ -1503,23 +1496,29 @@ macro take_interrupt(vector, setI, setB) {
   addi cpu_t0, -1
   andi cpu_t0, 0xff
 // Cycle 5: Push flags, decrement S
+  lbu t0, cpu_c_byte (r0)
   lbu t2, cpu_flags (r0)
-  lhu t0, cpu_nz_val (r0)
-  lbu t0, nz_table (t0)
-  lbu t3, cpu_c_byte (r0)
+  lbu t1, cpu_z_byte (r0)
   or t0, t2
-  or t0, t3
+  bnez t1,+
+  lb t1, cpu_n_byte (r0)
+  ori t0, flagZ
++
+
+if {setI} == 1 {
+  ori t2, flagI
+}
+
+  bgez t1,+
+  sb t2, cpu_flags (r0)
+  ori t0, flagN
++
 
 if {setB} == 1 {
   ori t0, flagB
 }
 
   sb t0, nes_ram + 0x100 (cpu_t0)
-
-if {setI} == 1 {
-  ori t2, flagI
-}
-  sb t2, cpu_flags (r0)
 
   addi cpu_t0, -1
   andi cpu_t0, 0xff
@@ -1536,6 +1535,7 @@ if {setI} == 1 {
   la_gp(ra, TestNextCycleAndFetchOpcode)
 }
 
+// TODO these shouldn't be with the cold data
 TakeBRK:
   daddiu cycle_balance, cpu_div * 6
   addiu cpu_mpc, 1

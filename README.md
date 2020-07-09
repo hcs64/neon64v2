@@ -34,7 +34,7 @@ The CPU address space is mapped by read and write pointers for every 256 byte pa
 
 The most common thing the 6502 does is read bytes at the current PC, so PC is a native pointer, in register `cpu_mpc`. It gets converted back (by subtracting `cpu_mpc_base`) as needed. When the PC increments normally, the pointer can just be incremented, unless it passes into another bank. To trap this, after each TLB page there is unmapped guard space. This is rare enough that I've never seen it happen, so I haven't implemented recovery yet; if needed the exception handler could remap PC.
 
-The N and Z flags are used somewhat less often than they are set, so I defer updating them; operations that would set NZ save the relevant value in `cpu_nz_val`. There is a weird case where N and Z are both set (possible with `PLA` or `RTI`), so this needs to be 16 bits; the evaluation uses a lookup table so this usually has no overhead. I'm not sure if this is a great idea in its current form, I haven't profiled without it.
+The N, Z, and C flags are used somewhat less often than they are set, so I defer updating them; operations that would change then save the relevant value in `cpu_{n,z,c}_byte`. I'm not sure if this is a great idea in its current form, I haven't profiled without it.
 
 In the profile bars, CPU task time is bright green.
 

@@ -57,7 +57,7 @@ read_op(  0x0e, "ASL abs",  addr_rw_abs,  ex_asl)
 bad_op(   0x0f)
 // 0x10: BPL
   j ex_bpl
-  lhu cpu_t0, cpu_nz_val (r0)
+  lb cpu_t0, cpu_n_byte (r0)
 read_op(  0x11, "ORA iY",   addr_r_iy,    ex_ora)
 bad_op(   0x12)
 bad_op(   0x13)
@@ -99,7 +99,7 @@ bad_op(   0x2f)
 
 // 0x30: BMI
   j ex_bmi
-  lhu cpu_t0, cpu_nz_val (r0)
+  lb cpu_t0, cpu_n_byte (r0)
 read_op(  0x31, "AND iY",   addr_r_iy,    ex_and)
 bad_op(   0x32)
 bad_op(   0x33)
@@ -313,7 +313,7 @@ bad_op(   0xcf)
 
 // 0xd0
   j ex_bne
-  lhu cpu_t0, cpu_nz_val (r0)
+  lbu cpu_t0, cpu_z_byte (r0)
 read_op(  0xd1, "CMP IY",   addr_r_iy,    ex_cmp)
 bad_op(   0xd2)
 bad_op(   0xd3)
@@ -355,7 +355,7 @@ bad_op(   0xef)
 
 // 0xf0: BEQ
   j ex_beq
-  lhu cpu_t0, cpu_nz_val (r0)
+  lbu cpu_t0, cpu_z_byte (r0)
 read_op(  0xf1, "SBC IY",   addr_r_iy,    ex_sbc)
 bad_op(   0xf2)
 bad_op(   0xf3)
