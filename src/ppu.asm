@@ -3,6 +3,7 @@
 //define LOG_SPRITES()
 //define DUMP_RGB_PALETTE()
 //define DUMP_VRAM()
+define MAPPER9()
 
 begin_low_page()
 
@@ -110,6 +111,10 @@ Init:
   ls_gp(sb r0, conv_write_cached)
   ls_gp(sw r0, frames_finished)
   ls_gp(sw r0, ppu_frame_count)
+
+if {defined MAPPER9} {
+  ls_gp(sh r0, mapper9_latch0)
+}
 
 // Clear VRAM
   lli t0, 0x800
@@ -543,6 +548,18 @@ if {height} == 8 {
   sll t8, 4
   add t4, t8
 }
+
+if {defined MAPPER9} {
+  lli t8, 0x0fd0
+  beq t4, t8,+
+  lli t8, 0x0fe0
+  bne t4, t8,++
+  nop
++
+  ls_gp(sh t4, mapper9_latch0)
++
+}
+
   srl t8, t4, 10
   sll t8, 2
   lw t8, ppu_map (t8)
@@ -667,6 +684,15 @@ sprite_fetch_done:
   sd ppu_t2, 0(t3)
   addi t3, 8
   ls_gp(sw t3, sp_x_pos)
+
+if {defined MAPPER9} {
+  ls_gp(lhu t0, mapper9_latch0)
+  beqz t0,+
+  nop
+  jal Mapper9Latch0
+  nop
++
+}
 
 // ##### Begin background
   bgezal cycle_balance, Scheduler.Yield
@@ -801,6 +827,19 @@ macro nt_at_fetch(bg_cycle_balance, nt_addr, pt_base, at_byte, nt_shift, at_shif
 // Fetch NT byte
   lbu t0, 0 ({nt_addr})
   daddi {bg_cycle_balance}, 8 * ppu_div
+
+if {defined MAPPER9} {
+  lli t1, 0xfd
+  beq t0, t1,+
+  lli t1, 0xfe
+  bne t0, t1,++
+  nop
++
+  jal Mapper9Latch1
+  nop
++
+}
+
   addi {nt_addr}, 1
 // Fetch PT bytes
   sll t0, 4
@@ -962,6 +1001,27 @@ bg_fetch_finish:
   sw r0, ppu_catchup_cb (r0)
 
 bg_fetch_flush:
+if {defined MAPPER9} {
+// Tile 34
+  andi t0, ppu_vaddr, 0b1100'0000'0000  // NT select
+  srl t1, t0, 10-2
+  lw t1, ppu_map + 8*4 (t1) // 0x2000 >> 10 == 8
+  andi t0, ppu_vaddr, 0b1111'1111'1111 // Current NT address
+  addi t0, 0x2000
+  add t0, t1
+
+  lbu t0, 0 (t0)
+  lli t1, 0xfd
+  beq t0, t1,+
+  lli t1, 0xfe
+  bne t0, t1,++
+  nop
++
+  jal Mapper9Latch1
+  nop
++
+}
+
 // Store per-line values, cached for now
   lbu t0, cur_scanline (r0)
 

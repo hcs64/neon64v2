@@ -166,6 +166,8 @@ still_fail:
   beq t0, t2, InitMapper4
   lli t2, 7
   beq t0, t2, InitMapper7
+  lli t2, 9
+  beq t0, t2, InitMapper9
   lli t2, 30
   beq t0, t2, InitMapper30
   lli t2, 31
@@ -415,6 +417,7 @@ include "mappers/mapper2.asm"
 include "mappers/mapper3.asm"
 include "mappers/mapper4.asm"
 include "mappers/mapper7.asm"
+include "mappers/mapper9.asm"
 include "mappers/mapper30.asm"
 include "mappers/mapper31.asm"
 include "mappers/mapper71.asm"
