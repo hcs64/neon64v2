@@ -106,11 +106,23 @@ if {defined LOG_PPU} {
   lw ra, cpu_rw_handler_ra (r0)
 }
 
+  lw t1, ppu_catchup_cb (r0)
+  sw ra, cpu_rw_handler_ra (r0)
+-
   andi t0, cpu_t1, 7
+  beqz t1,+
   sll t0, 2
+
+// Catch up the PPU (BG fetch) before changing anything
+// TODO should really push this into the PPU to check if something actually changed
+// TODO this will be accounted against the CPU, see if there's a way around that
+  jalr t1
+  nop
+  j -
+  lli t1, 0
++
   add t0, gp
   lw t0, jump_table - gp_base (t0)
-  sw ra, cpu_rw_handler_ra (r0)
   jr t0
   la_gp(ra, done_restore_ra)
 

@@ -18,7 +18,7 @@ Architecture ideas:
 
 Missing features needed for better accuracy:
 - Mid-frame palette changes
-- Mid-scanline BG changes (MMC2, fine X scroll change, etc)
+- Mid-scanline fine X changes
 - BG-accurate SP0 hit
 - Bug-accurate Sprite overflow
 - Read of PPU activity
@@ -76,6 +76,4 @@ Known bugs:
 - Jurassic Park - Ocean logo on the title screen seems to have a few lines out of place (check hw?)
 - Pop when shooting sword in Zelda is irritatingly loud
 - Some audio glitching in Mega Man 2 intro (check hw?)
-- Black line over Kirby in pause screen - This is going to require better IRQ timing and maybe mid-scanline scroll
-- Marble Madness garbled text - Needs mid-scanline pattern addr switch.
 - Big Nose Freaks Out doesn't get in-game. Needs IRQ?

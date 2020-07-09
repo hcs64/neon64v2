@@ -17,6 +17,8 @@ ppu_bg32_atr_lines:;  dd 0
 ppu_bg_x_lines:; dd 0
 ppu_sp_pri:;  dd 0
 
+ppu_catchup_cb:; dw 0
+
 ppu_scroll:;  dh 0
 
 ppu_fine_x_scroll:; db 0
@@ -50,6 +52,10 @@ num_sprites_line:; fill 240
 align(8)
 sprites_line:; fill 8*240
 
+align(8)
+ppu_catchup_current_cycle:; dd 0
+ppu_catchup_ra:; dw 0
+
 align(4)
 conv_pos:;      dw 0
 bg_pat_pos:;    dw 0
@@ -71,11 +77,14 @@ end_bss()
 scope PPU {
 
 constant idle_pixels(1)
-constant sprite_fetch_pixels(64)
-constant bg_prefetch_pixels(16)
-constant bg_dummy_pixels(4)
+constant tile_pixels(8)
+constant sprite_fetch_pixels(tile_pixels*8)
+constant bg_prefetch_tiles(2)
+constant bg_prefetch_pixels(tile_pixels*bg_prefetch_tiles)
+constant bg_fetch_tiles(34)
+constant bg_dummy_nt_pixels(4)
 constant visible_pixels(256)
-constant hblank_pixels(sprite_fetch_pixels+bg_prefetch_pixels+bg_dummy_pixels)
+constant hblank_pixels(sprite_fetch_pixels+bg_prefetch_pixels+bg_dummy_nt_pixels)
 constant scanline_pixels(idle_pixels+visible_pixels+hblank_pixels)
 constant vblank_delay(1)
 
@@ -85,6 +94,7 @@ Init:
 
 // Init vars
   lli ppu_vaddr, 0
+  sw r0, ppu_catchup_cb (r0)
   sh r0, ppu_scroll (r0)
   sb r0, ppu_fine_x_scroll (r0)
   sb r0, ppu_scroll_latch (r0)
@@ -658,6 +668,7 @@ sprite_fetch_done:
   addi t3, 8
   ls_gp(sw t3, sp_x_pos)
 
+// ##### Begin background
   bgezal cycle_balance, Scheduler.Yield
   nop
 
@@ -675,45 +686,10 @@ sprite_fetch_done:
 // TODO consider different combinations of pattern tables, 8x16 sprites, 2006 clocking...
 +
 
-// BG prefetch
-  daddi cycle_balance, bg_prefetch_pixels * ppu_div
-  daddi cycle_balance, bg_dummy_pixels * ppu_div
-
-// Yield before visible pixels to get latest settings, which
-// can often change during prefetch.
-  bgezal cycle_balance, Scheduler.Yield
-  nop
-
-// FIXME fake sp0, assumes we hit on sp0 X if any pixel in sp0 is solid
-  lbu t0, sp0_this_line (r0)
-  beqz t0,+
-  nop
-
-  lbu t0, ppu_status (r0)
-  ls_gp(lbu t1, oam + 3) // sprite 0 X
-  andi t0, 0b0100'0000
-  bnez t0,+
-  nop
-
-  ppu_mul(t1, t2)
-  dadd cycle_balance, t1
-
-  bgezal cycle_balance, Scheduler.Yield
-  nop
-
-  lbu t0, ppu_status (r0)
-  ls_gp(lbu t1, oam + 3) // sprite 0 X
-  ori t0, 0b0100'0000
-  sb t0, ppu_status (r0)
-
-  ppu_mul(t1, t2)
-  dsub cycle_balance, t1
-+
-
-// visible pixels
-  daddi cycle_balance, visible_pixels * ppu_div
-
 // ##### Fetch background
+// TODO This really belongs at the start of visible pixels
+  daddi cycle_balance, bg_dummy_nt_pixels * ppu_div
+
   lbu t0, ppu_mask (r0)
   andi t0, 0b0000'1000
   bnez t0, bg_render_enabled
@@ -741,29 +717,78 @@ sprite_fetch_done:
   move ppu_t0, 0
   move ppu_t1, 0
 
-  j bg_render_flush
-  nop
+  j bg_fetch_flush
+  daddi cycle_balance, (bg_fetch_tiles * tile_pixels) * ppu_div
 
 bg_render_enabled:
+
+// Set up the fetch loop
 
 // ppu_t0: Pattern shift reg (if gez this shift will fill the reg)
   lui ppu_t0, 0xffff
 // ppu_t1: Attribute shift reg ('')
   addi ppu_t1, r0, -0x100
 // ppu_t2: Tiles left
-  lli ppu_t2, 33-1  // technically 34, but not fetching final for rendering
+  lli ppu_t2, bg_fetch_tiles-2  // not fetching final tile here
 
-macro nt_at_addr(nt_addr, at_addr) {
-  andi t0, ppu_vaddr, 0b1100'0000'0000 // NT select
+  ld t1, target_cycle (r0)
+  la_gp(t0, FetchBG)
+  sw t0, ppu_catchup_cb (r0)
+  dadd t1, cycle_balance
+  ls_gp(sd t1, ppu_catchup_current_cycle)
+
+// Sprite 0 hit
+// FIXME fake sp0, assumes we hit on sp0 X if any pixel in sp0 is solid
+  lbu t0, sp0_this_line (r0)
+  beqz t0, sp0_set_done
+  nop
+
+  lbu t0, ppu_status (r0)
+  ls_gp(lbu t1, oam + 3) // sprite 0 X
+  andi t0, 0b0100'0000
+  bnez t0, sp0_set_done
+  nop
+
+  ppu_mul(t1, t2)
+  daddi cycle_balance, bg_prefetch_tiles * tile_pixels * ppu_div
+  dadd cycle_balance, t1
+
+  bgezal cycle_balance, Scheduler.Yield
+  nop
+
+  lbu t0, ppu_status (r0)
+  ls_gp(lbu t1, oam + 3) // sprite 0 X
+  ori t0, 0b0100'0000
+  sb t0, ppu_status (r0)
+
+  ppu_mul(t1, t2)
+  dsub cycle_balance, t1
+sp0_set_done:
+
+  daddi cycle_balance, (bg_fetch_tiles * tile_pixels) * ppu_div
+
+  bgezal cycle_balance, Scheduler.Yield
+  nop
+
+// If there is still fetch left when we resume, finish it.
+  lw t0, ppu_catchup_cb (r0)
+  bnez t0, FetchBG
+  la_gp(ra, bg_fetch_flush)
+
+  j bg_fetch_flush
+  nop
+
+macro nt_at_addr(vaddr, nt_addr, at_addr) {
+  andi t0, {vaddr}, 0b1100'0000'0000 // NT select
   srl t3, t0, 10-2
   lw t3, ppu_map + 8*4 (t3) // 0x2000 >> 10 == 8
-  andi {nt_addr}, ppu_vaddr, 0b1111'1111'1111 // Current NT address
+  andi {nt_addr}, {vaddr}, 0b1111'1111'1111 // Current NT address
   addi {nt_addr}, 0x2000
   add {nt_addr}, t3
 
-  andi t1, ppu_vaddr, 0b00'0001'1100  // Coarse X scroll / 4
+  andi t1, {vaddr}, 0b00'0001'1100  // Coarse X scroll / 4
   srl t1, 2
-  andi t2, ppu_vaddr, 0b11'1000'0000  // Coarse Y scroll / 4
+  andi t2, {vaddr}, 0b11'1000'0000  // Coarse Y scroll / 4
   srl t2, 4
   or {at_addr}, t1, t2
   addi {at_addr}, 0x23c0
@@ -771,9 +796,11 @@ macro nt_at_addr(nt_addr, at_addr) {
   add {at_addr}, t3
 }
 
-macro nt_at_fetch(nt_addr, pt_base, at_byte, nt_shift, at_shift, tiles_left, nt_full, at_full, finish) {
+macro nt_at_fetch(bg_cycle_balance, nt_addr, pt_base, at_byte, nt_shift, at_shift, tiles_left, nt_full, at_full, yield, finish) {
+  bgez {bg_cycle_balance}, {yield}
 // Fetch NT byte
   lbu t0, 0 ({nt_addr})
+  daddi {bg_cycle_balance}, 8 * ppu_div
   addi {nt_addr}, 1
 // Fetch PT bytes
   sll t0, 4
@@ -801,23 +828,44 @@ macro nt_at_fetch(nt_addr, pt_base, at_byte, nt_shift, at_shift, tiles_left, nt_
   addi {tiles_left}, -1
 }
 
+// We enter here from anywhere that changes state during a line,
+// before the change is made.
+FetchBG:
+// t8: Cycle balance to catch up
+  ld t8, target_cycle (r0)
+  ls_gp(ld t0, ppu_catchup_current_cycle)
+  dadd t8, cycle_balance
+  dsub t8, t0, t8
+
+// t9: Initial tiles left, to count tiles completed in each run
+  move t9, ppu_t2
+// s8: Temp vaddr
+  move s8, ppu_vaddr
+
+// Yield immediately if we already ran past this time
+  bltz t8,+
+  ls_gp(sw ra, ppu_catchup_ra)
+  jr ra
+  nop
++
+
 // a2: BG pattern table base + fine Y
   lbu a2, ppu_ctrl (r0)
-  srl t0, ppu_vaddr, 12
+  srl t0, s8, 12
   andi a2, 0b1'0000
   sll a2, 12-4
   add a2, t0
 
 // a0: Name table address
 // a1: Attribute table address
-  nt_at_addr(a0, a1)
+  nt_at_addr(s8, a0, a1)
 
 // AT phase:
 // 0 = 1 tile with left..
 // 1 = 1 tile with left...
 // 2 = 1 tile with right...
 // 3 = 1 tile with right, goto 0
-  andi t2, ppu_vaddr, 0b00'0000'0011
+  andi t2, s8, 0b00'0000'0011
 
   sll t2, 2
   add t2, gp
@@ -826,8 +874,8 @@ macro nt_at_fetch(nt_addr, pt_base, at_byte, nt_shift, at_shift, tiles_left, nt_
 // Load AT byte
 // a3: AT byte, shifted to expose next tile's bits
   lbu a3, 0 (a1)
-  andi t0, ppu_vaddr, 0b00'0100'0000 // bit 1 of coarse Y scroll (top or bottom)
-  andi t1, ppu_vaddr, 0b00'0000'0010 // bit 1 of coarse X scroll (left or right)
+  andi t0, s8, 0b00'0100'0000 // bit 1 of coarse Y scroll (top or bottom)
+  andi t1, s8, 0b00'0000'0010 // bit 1 of coarse X scroll (left or right)
   srl t0, 6-2 // x4
   srlv a3, t0 // select top or bottom
   jr t2
@@ -837,31 +885,31 @@ at_phase_jump_table:
   dw at_phase0, at_phase1, at_phase2, at_phase3
 
 at_phase0:
-nt_at_fetch(a0, a2, a3, ppu_t0, ppu_t1, ppu_t2, nt_full, at_full, bg_render_flush)
+nt_at_fetch(t8, a0, a2, a3, ppu_t0, ppu_t1, ppu_t2, nt_full, at_full, bg_fetch_yield, bg_fetch_finish)
 at_phase1:
-nt_at_fetch(a0, a2, a3, ppu_t0, ppu_t1, ppu_t2, nt_full, at_full, bg_render_flush)
+nt_at_fetch(t8, a0, a2, a3, ppu_t0, ppu_t1, ppu_t2, nt_full, at_full, bg_fetch_yield, bg_fetch_finish)
   srl a3, 2
 at_phase2:
-nt_at_fetch(a0, a2, a3, ppu_t0, ppu_t1, ppu_t2, nt_full, at_full, bg_render_flush)
+nt_at_fetch(t8, a0, a2, a3, ppu_t0, ppu_t1, ppu_t2, nt_full, at_full, bg_fetch_yield, bg_fetch_finish)
 at_phase3:
-nt_at_fetch(a0, a2, a3, ppu_t0, ppu_t1, ppu_t2, nt_full, at_full, bg_render_flush)
+nt_at_fetch(t8, a0, a2, a3, ppu_t0, ppu_t1, ppu_t2, nt_full, at_full, bg_fetch_yield, bg_fetch_finish)
 
   andi t0, a0, 0b1'1111
   bnez t0,+
   addi a1, 1
 
 // Wrap to other nametable (horizontal)
-  andi ppu_vaddr, 0b111'1111'1110'0000
-  xori ppu_vaddr, 0b000'0100'0000'0000
+  andi s8, 0b111'1111'1110'0000
+  xori s8, 0b000'0100'0000'0000
 
 // TODO this can be somewhat simplified given X == 0?
-  nt_at_addr(a0, a1)
+  nt_at_addr(s8, a0, a1)
 
 +
 // Fetch a new attribute table byte
   lbu a3, 0 (a1)
 
-  andi t0, ppu_vaddr, 0b00'0100'0000 // bit 1 of coarse Y scroll
+  andi t0, s8, 0b00'0100'0000 // bit 1 of coarse Y scroll
   srl t0, 6-2 // x4
   j at_phase0
   srlv a3, t0 // select top or bottom
@@ -882,12 +930,38 @@ at_full:
   jr ra
   ls_gp(sw t0, bg_atr_pos)
 
-bg_render_flush:
-// Yield is here mostly in order to get ppu_fine_x_scroll as of the end of the line,
-// which is more likely (?) to be the majority than what was present at the start of the line.
-  bgezal cycle_balance, Scheduler.Yield
-  nop
+bg_fetch_yield:
+  sub t0, t9, ppu_t2
 
+// track cycles
+  ls_gp(ld t2, ppu_catchup_current_cycle)
+  sll t1, t0, 3 // *8
+  ppu_mul(t1, t3)
+  dadd t2, t1
+  ls_gp(sd t2, ppu_catchup_current_cycle)
+
+-
+  ls_gp(lw ra, ppu_catchup_ra)
+
+// update vaddr
+  add t1, ppu_vaddr, t0
+  xor t2, t1, ppu_vaddr
+// check for X overflow
+  andi ppu_vaddr, 0b111'1111'1110'0000
+// # NT wraps, mod 2
+  andi t2, 0b000'0000'0010'0000
+  sll t2, 10-5
+  xor ppu_vaddr, t2
+  andi t1, 0b1'1111
+  jr ra
+  or ppu_vaddr, t1
+
+bg_fetch_finish:
+  sub t0, t9, ppu_t2
+  j -
+  sw r0, ppu_catchup_cb (r0)
+
+bg_fetch_flush:
 // Store per-line values, cached for now
   lbu t0, cur_scanline (r0)
 
@@ -900,7 +974,6 @@ bg_render_flush:
 
   sh ppu_t0, ppu_bg32_pat_lines (t1)
 
-bg_render_done:
   lbu t0, cur_scanline (r0)
   addi t0, 1
 
@@ -910,6 +983,7 @@ bg_render_done:
 // Every 8 lines...
 
 // Poke the RSP
+// TODO shouldn't this go after SetConvertPos?
   jal RSP.Run
   lli a0, ppu_rsp_task
 
@@ -963,7 +1037,7 @@ bg_render_done:
   xori t0, t2, 0b1000'0000'0000 // flip nametable (vertical) and Y = 0
 +
 
-// Reset X (ppu_vaddr X hasn't been updated during the line)
+// Reset X
   lhu t1, ppu_scroll (r0)
   andi t0, 0b111'1011'1110'0000 // X = 0
   andi t1, 0b000'0100'0001'1111 // Select X scroll
