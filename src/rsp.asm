@@ -3,6 +3,7 @@
 begin_bss()
 
 rsp_interrupt_wait:; db 0
+rsp_shutdown_requested:; db 0
 
 align(4)
 end_bss()
@@ -66,6 +67,7 @@ Init:
   nop
 
   ls_gp(sb r0, rsp_interrupt_wait)
+  ls_gp(sb r0, rsp_shutdown_requested)
 
 // Enable SP interrupt
   lui t0, MI_BASE
@@ -164,8 +166,15 @@ exception_restore_regs_for_debug()
   nop
 +
 
-// Check if the scheduler was idle
+  ls_gp(lbu t0, rsp_shutdown_requested)
+  beqz t0,+
   lui t1, SP_BASE
+// Shutdown requested, clear idle so someone else doesn't start it
+  lui t0, CLR_SG7>>16
+  j ++
+  sw t0, SP_STATUS (t1)
++
+// Check if the scheduler was idle
   lw t0, SP_STATUS (t1)
   andi t0, RSP_SG7
   bnez t0,+

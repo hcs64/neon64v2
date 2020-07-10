@@ -131,6 +131,10 @@ scope {#} {
   nop
 +
 
+  ls_gp(lbu t0, switch_model_requested)
+  bnez t0, SwitchModel
+  nop
+
 if {defined PROFILE_RDP} {
   ls_gp(lwu t0, frame_rdp_cycles)
   lui t1, DPC_BASE

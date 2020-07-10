@@ -73,7 +73,7 @@ Init:
 
 // Reset RDP
   lui t2, DPC_BASE
-  lli t1, CLR_XBS|CLR_FRZ
+  lli t1, CLR_XBS|CLR_FRZ|CLR_FLS
   sw t1, DPC_STATUS (t2)
 
 // Enable interrupts

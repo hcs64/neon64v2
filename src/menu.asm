@@ -1,10 +1,13 @@
 constant max_menu_items(8)
 constant exit_menu_flag(1)
 
+constant menu_default_width(12)
+
 scope Menu: {
 Init:
   ls_gp(sh r0, prev_buttons)
   ls_gp(sb r0, profile_bars_enabled)
+  ls_gp(sb r0, switch_model_requested)
   ls_gp(sb r0, menu_enabled)
   jr ra
   nop
@@ -127,6 +130,9 @@ BuildMain:
   jal AddItem
   la_gp(a0, save_ram_sram_menu_item)
 +
+
+  jal AddItem
+  la_gp(a0, model_switch_menu_item)
 
   jal AddItem
   la_gp(a0, debug_menu_item)
@@ -280,7 +286,7 @@ Display:
   addi sp, -16
 
 StartBuild:
-  li t0, 10
+  lli t0, menu_default_width
   ls_gp(sb t0, menu_min_width)
 
   la t0, (margin + (4 + 8*width)*8)*2
@@ -381,6 +387,7 @@ align(8)
 menu_item(ok_menu_item, ok_menu_msg, Menu.Stub, exit_menu_flag)
 menu_item(dismiss_menu_item, dismiss_menu_msg, Menu.Stub, exit_menu_flag)
 menu_item(save_ram_sram_menu_item, save_ram_sram_menu_msg, SaveExtraRAMToSRAM, exit_menu_flag)
+menu_item(model_switch_menu_item, model_switch_menu_msg, RequestSwitchModel, exit_menu_flag)
 menu_item(debug_menu_item, debug_menu_msg, Menu.BuildDebug, 0)
 
 menu_item(debug_menu_back_item, back_msg, Menu.BuildMain, 0)
@@ -401,6 +408,13 @@ ok_menu_msg:
   db "OK",0
 save_ram_sram_menu_msg:
   db "Save",0
+if {defined NTSC_NES} {
+model_switch_menu_msg:
+  db "Reboot PAL",0
+} else if {defined PAL_NES} {
+model_switch_menu_msg:
+  db "Reboot NTSC",0
+}
 debug_menu_msg:
   db "Debug...",0
 about_menu_msg:
@@ -416,12 +430,12 @@ selected_end_msg:
 
 menu_frame_header_msg:
   db ch_box_ul
-  fill 10+4, ch_box_h
+  fill menu_default_width+4, ch_box_h
   db ch_box_ur,"\n",0
 
 menu_frame_footer_msg:
   db ch_box_dl
-  fill 10+4, ch_box_h
+  fill menu_default_width+4, ch_box_h
   db ch_box_dr,"\n",0
 
 debug_menu_header_msg:
@@ -446,6 +460,7 @@ about_menu_scroll:; dh 0
 
 profile_bars_enabled:; db 0
 menu_enabled:; db 0
+switch_model_requested:; db 0
 menu_exit_requested:; db 0
 menu_item_count:; db 0
 menu_min_width:; db 0

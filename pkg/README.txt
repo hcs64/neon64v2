@@ -6,7 +6,7 @@ NES Emulation, On the N64, in the distant future...
 Features
 --------
 
-- NTSC NES on NTSC N64
+- NTSC and PAL NES on NTSC N64
 - CPU (official opcodes)
 - PPU
 - APU channels (2 square, triangle, noise, DMC)
@@ -36,8 +36,6 @@ copy /b neon64bu.rom + game.nes game.n64
 on Linux, macOS, etc:
 
 cat neon64bu.rom game.nes > game.n64
-
-I've included a separate version with PAL NES timing, this is usable but janky.
 
 Controls
 --------

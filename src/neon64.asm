@@ -4,6 +4,7 @@ endian msb
 define PROFILE_BARS()
 //define PROFILE_RDP()
 
+include "lib/mips.inc"
 include "lib/n64.inc"
 include "lib/n64_rsp.inc"
 include "lib/n64_gfx.inc"
@@ -24,22 +25,6 @@ if !({defined NES_TIMING} || {defined PAL_NES}) {
 define NTSC_NES()
 }
 
-// Pad for checksum
-fill 0x10'1000
-origin 0
-if {defined NTSC_NES} {
-N64_HEADER(Entrypoint, "Neon64 2.0-WIP")
-} else if {defined PAL_NES} {
-N64_HEADER(Entrypoint, "Neon64 2.0-WIPPALNES")
-}
-insert "lib/N64_BOOTCODE.BIN"
-
-define RESIDENT_BASE(0x8000'1000)
-base {RESIDENT_BASE}
-Entrypoint:
-  j Start
-  nop
-
 include "mem.asm"
 
 constant width(320)
@@ -53,13 +38,14 @@ if abuf_samples != abuf_samples/2*2 {
 error "buffer must be an even number of samples"
 }
 constant cycles_per_sample(clock_rate/samplerate)
-Start:
-// PIF mumbo jumbo (disarm watchdog?)
-// TODO is this supposed to be waiting for something first?
-  lui a0, PIF_BASE
-  lli t0, 8
-  sw t0, PIF_RAM+$3C(a0)
 
+base {RESIDENT_BASE}
+
+if origin() != 0 {
+  error "entrypoint must be at start of output"
+}
+
+Entrypoint:
   gp_init()
 
   la sp, call_stack
@@ -88,7 +74,7 @@ Start:
   cache data_hit_invalidate, 2*DCACHE_LINE (t2)
   cache data_hit_invalidate, 3*DCACHE_LINE (t2)
   sw t2, PI_DRAM_ADDR (t0)
-  la t1, 0x1000'0000
+  la t1, rom_cart_addr
   sw t1, PI_CART_ADDR (t0)
   lli t1, 0x40-1
   sw t1, PI_WR_LEN (t0)
@@ -151,6 +137,36 @@ Start:
 
   j Scheduler.NoTasks
   nop
+
+RequestSwitchModel:
+// Defer until the RDP seems to be calming down
+  lli t0, 1
+  jr ra
+  ls_gp(sb t0, switch_model_requested)
+
+SwitchModel:
+  lli t0, 1
+  ls_gp(sb t0, rsp_shutdown_requested)
+
+// wait for halt
+  lui t1, SP_BASE
+-
+  lw t0, SP_STATUS (t1)
+  andi t0, RSP_HLT
+  beqz t0,-
+  nop
+
+  mtc0 r0, Status
+
+if {defined NTSC_NES} {
+  j 0x8000'0800
+  nop
+} else if {defined PAL_NES} {
+  j 0x8000'0400
+  nop
+}
+
+
 
 PrintHeaderInfo:
   addi sp, 8
@@ -296,7 +312,7 @@ if bss_pc > last_backfill {
 
 align(8)
 
-base pc() - base() + rom_cart_addr
+base pc() - base() + rom_cart_addr + {ROM_OFFSET}
 
 if {defined ERR_EMBED1} {
 align(8)
@@ -310,11 +326,3 @@ err_embed_rom2:
 }
 
 emit_overlays()
-
-if 1 != 1 {
-origin 0x10'1000
-
-//insert ""
-
-align(512)
-}

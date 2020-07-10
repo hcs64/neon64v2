@@ -31,7 +31,6 @@ Desired features:
 - Gameshark version
 - Controller 2
 - 4 player via Four Score
-- PAL NES mode switch at runtime
 - Proper text and profiling in PAL mode
 - Remember PAL setting per-game
 - Control remapping
@@ -74,3 +73,4 @@ Known bugs:
 - Big Nose Freaks Out doesn't get in-game. Needs IRQ?
 - A line is out of place on the Mike Tyson's Punch Out title screen
 - Scroll artifact is out of place in SMB3
+- Profiling and menus are busted on non-PAL mode
