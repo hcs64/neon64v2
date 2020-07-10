@@ -10,6 +10,12 @@ include "lib/n64_rsp.inc"
 include "lib/n64_gfx.inc"
 include "regs.inc"
 
+if !({defined NTSC_NES} || {defined PAL_NES}) {
+define NTSC_NES()
+}
+
+include "loader_mem.inc"
+
 if !{defined OUTPUT_FILE} {
 define OUTPUT_FILE("neon64.n64")
 }
@@ -19,10 +25,6 @@ macro close_output_file() {
 }
 macro reopen_output_file() {
   output {OUTPUT_FILE}
-}
-
-if !({defined NES_TIMING} || {defined PAL_NES}) {
-define NTSC_NES()
 }
 
 include "mem.asm"
@@ -39,7 +41,7 @@ error "buffer must be an even number of samples"
 }
 constant cycles_per_sample(clock_rate/samplerate)
 
-base {RESIDENT_BASE}
+base RESIDENT_BASE
 
 if origin() != 0 {
   error "entrypoint must be at start of output"
@@ -159,10 +161,10 @@ SwitchModel:
   mtc0 r0, Status
 
 if {defined NTSC_NES} {
-  j 0x8000'0800
+  j PAL_LOADER
   nop
 } else if {defined PAL_NES} {
-  j 0x8000'0400
+  j NTSC_LOADER
   nop
 }
 
@@ -312,7 +314,7 @@ if bss_pc > last_backfill {
 
 align(8)
 
-base pc() - base() + rom_cart_addr + {ROM_OFFSET}
+base pc() - base() + rom_cart_addr + ROM_OFFSET
 
 if {defined ERR_EMBED1} {
 align(8)

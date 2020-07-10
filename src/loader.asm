@@ -4,23 +4,22 @@ endian msb
 include "lib/mips.inc"
 include "lib/n64.inc"
 include "regs.inc"
+include "loader_mem.inc"
 
 // Pad for checksum
 fill 0x10'1000
 origin 0
-N64_HEADER(NTSCEntrypoint, "Neon64 2.0-WIP")
+N64_HEADER(NTSC_LOADER, "Neon64 2.0-WIP")
 insert "lib/N64_BOOTCODE.BIN"
 
-base 0x8000'0400
-NTSCEntrypoint:
+base NTSC_LOADER
   jal CommonInit
   nop
 // Tail call
   j StartNTSC
   nop
 
-fill 0x8000'0800 - pc()
-PALEntrypoint:
+fill PAL_LOADER - pc()
   jal CommonInit
   nop
 // Tail call
@@ -43,8 +42,8 @@ CommonInit:
 
 macro start_vector(model) {
 Start{model}:
-  la a0, rom_cart_addr + {{model}_ROM_OFFSET}
-  la a1, {RESIDENT_BASE}
+  la a0, rom_cart_addr + {model}_ROM_OFFSET
+  la a1, RESIDENT_BASE
   la a2, {model}_length
   jal PI.ReadSyncInvalidateIDCache
   nop
@@ -58,13 +57,13 @@ start_vector(PAL)
 
 include "pi_basics.asm"
 
-origin {NTSC_ROM_OFFSET}
+origin NTSC_ROM_OFFSET
 base 0
 insert "{NTSC_BIN}"
 align_icache()
 constant NTSC_length(pc())
 
-origin {PAL_ROM_OFFSET}
+origin PAL_ROM_OFFSET
 base 0
 insert "{PAL_BIN}"
 align_icache()
