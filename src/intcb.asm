@@ -66,11 +66,15 @@ check_callback(run_frame, frame_callback)
 check_callback(run_si, si_callback)
 check_callback(run_pi, pi_callback)
 
-// FIXME LL/SC aren't implemented on cen64
   lli t1, 0
+// FIXME LL/SC aren't implemented on cen64
+if 1 == 1 {
   sc t1, int_cb_needed (r0)
   beqz t1,-
   nop
+} else {
+  sw t1, int_cb_needed (r0)
+}
 
 // Tail call
   j Scheduler.FinishIntCBTask

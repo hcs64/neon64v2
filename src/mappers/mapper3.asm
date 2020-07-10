@@ -1,6 +1,7 @@
 // Mapper 3: CNROM
 
-InitMapper3:
+scope Mapper3: {
+Init:
   addi sp, 8
   sw ra, -8(sp)
 
@@ -8,7 +9,7 @@ InitMapper3:
   nop
 
 // 0x8000-0x1'0000
-  la_gp(t1, WriteMapper3)
+  la_gp(t1, Write)
   lli t2, 0
   lli t3, 0x80
 
@@ -18,19 +19,20 @@ InitMapper3:
   bnez t3,-
   addi t2, 4
 
-  jal WriteMapper3_after_shift
+  jal Write_after_shift
   lli t0, 0
 
   lw ra, -8(sp)
   jr ra
   addi sp, -8
 
-WriteMapper3:
+Write:
 // cpu_t0: data
 // cpu_t1: address (unused)
 
+// TODO save the bank for save states
   sll t0, cpu_t0, chrrom_page_shift
-WriteMapper3_after_shift:
+Write_after_shift:
 // 8K bank
   ls_gp(lwu t2, chrrom_mask)
   ls_gp(lwu t1, chrrom_start)
@@ -43,3 +45,4 @@ WriteMapper3_after_shift:
   sd t0, ppu_map + 4*4 (r0)
   jr ra
   sd t0, ppu_map + 6*4 (r0)
+}

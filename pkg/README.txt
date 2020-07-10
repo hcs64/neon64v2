@@ -1,4 +1,4 @@
-Neon64 2.0 beta 2
+Neon64 2.0 WIP
 =================
 
 NES Emulation, On the N64, in the distant future...
@@ -11,7 +11,7 @@ Features
 - PPU
 - APU channels (2 square, triangle, noise, DMC)
 - Battery backed RAM save to SRAM
-- iNES mappers #s 0,1,2,3,4,7,30,31,71
+- iNES mappers #s 0,1,2,3,4,7,9,10,30,31,71
 - Controller 1 (D-pad + analog)
 
 There's a lot missing, but it's already worlds better than 1.2.
@@ -64,7 +64,8 @@ Architecture
 ------------
 
 I split up the 6502 CPU ops to reduce code size; all N64 CPU code fits in
-ICache. All ucode fits in IMEM together.
+ICache. All ucode fits in IMEM together. Overlays keep only the active
+mapper in RAM, and provide modified PPU cores for MMC2, MMC3, and MMC4.
 
 The CPU runs the main PPU loop. It passes the bytes read to the RSP, which
 converts the background to a 4bpp texture and arranges sprites in an 8bpp
@@ -79,6 +80,10 @@ runs low, the AI interrupt can request an immediate flush to stretch the alist.
 The CPU has a cooperative scheduler, using an emulated cycle timer to trade off
 between the CPU and PPU. This works mainly with daddi+bgezl.
 
+While the PPU is fetching background tiles, it can yield; if the CPU task does
+any writes that would affect graphics mid-line, it will let the fetch catch up
+first.
+
 The RSP has a separate coop scheduler. When a task yields it can run code on the
 CPU via the RSP break interrupt.
 
@@ -90,6 +95,12 @@ On most games only around 50% of frame time is used.
 
 Version history
 ---------------
+
+2020-07-?? -
+  - Add mappers 9, 10 (MMC2, MMC4)
+  - Mid-line changes can now take effect (e.g. Marble Madness)
+  - Overlays, so mappers can modify the core PPU loop
+  - Scheduler tweaks
 
 2020-07-07 - beta 2
   - Add mappers 30, 31, 71
@@ -116,7 +127,7 @@ Many thanks to contributors to the NesDev wiki and ultra64.ca.
 
 Greets to the #n64dev and N64brew sceners, LaC, Pinchy, Zoinkity, jrra,
 mikeryan, ppcasm, arbin, DragonMinded, level42, fraser, fin, CrashOverride,
-et al!
+nico, anarko, et al!
 
 Hello to my HCS Forum friends, bxaimc, knurek, FastElbja, manakoAT, kode54,
 bnnm, Josh W, Mouser_X, and unknownfile if you're still out there!
@@ -134,4 +145,4 @@ Git: https://github.com/hcs64/neon64v2
 Forum: https://hcs64.com/mboard/forum.php
 Email: agashlin@gmail.com 
 
--hcs 2020-07-07
+-hcs 2020-07-??

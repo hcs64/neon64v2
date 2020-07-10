@@ -250,6 +250,11 @@ macro align(evaluate size) { // Align Byte Amount
     db 0
   }
 }
+macro align_file(evaluate size) {
+  while (origin() % {size}) {
+    db 0
+  }
+}
 
 macro align_dcache() {
   align(DCACHE_LINE)
@@ -257,6 +262,13 @@ macro align_dcache() {
 
 macro align_icache() {
   align(ICACHE_LINE)
+}
+
+macro assert_pc_alignment(evaluate size) {
+  if pc() % size != 0 {
+    print "pc=", pc(), " alignment=", {size}
+    error "not aligned"
+  }
 }
 
 // Cache ops

@@ -62,6 +62,38 @@ WaitViaInt:
   j --
   nop
 
+// Note: a1 and a2 should be aligned to 32 bytes (ICACHE_LINE)
+// a0: PI space address
+// a1: DRAM address
+// a2: Length
+ReadSyncInvalidateIDCache:
+  addi t0, a2, -ICACHE_LINE
+  add t1, a1, t0
+
+-
+  cache inst_hit_invalidate, 0 (t1)
+  addi t1, -ICACHE_LINE
+  bnez t0,-
+  addi t0, -ICACHE_LINE
+
+// fall through
+
+// Note: a1 and a2 should be aligned to 16 bytes (DCACHE_LINE)
+// a0: PI space address
+// a1: DRAM address
+// a2: Length
+ReadSyncInvalidateDCache:
+  addi t0, a2, -DCACHE_LINE
+  add t1, a1, t0
+
+-
+  cache data_hit_invalidate, 0 (t1)
+  addi t1, -DCACHE_LINE
+  bnez t0,-
+  addi t0, -DCACHE_LINE
+
+// fall through
+
 // Note: Does not invalidate cache
 // a0: PI space address
 // a1: DRAM address

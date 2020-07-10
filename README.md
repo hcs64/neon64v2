@@ -12,6 +12,8 @@ To build the PAL NES version (neon64bu_pal.rom), run `make pal`, or `make all` t
 
 ## Overview
 
+TODO: Update to reflect changes since beta.2 (overlays, mid-scanline catchup, scheduler tweaks).
+
 The scheduler runs the show after all the inits in `neon64.asm`. Profile bars show time on the RSP (top) and CPU (bottom) relative to a 60 FPS frame.
 
 ### Scheduling

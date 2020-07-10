@@ -1,6 +1,7 @@
 //define LOG_MAPPER_31()
 
-InitMapper31:
+scope Mapper31: {
+Init:
   addi sp, 16
   sw ra, -16 (sp)
 
@@ -54,7 +55,7 @@ InitMapper31:
 
 // Mapper register is written at 0x5000-0x6000
   lli t0, 0
-  la_gp(t1, WriteMapper31)
+  la_gp(t1, Write)
   lli t2, 0x10
 -
   sw t1, cpu_write_map + 0x50*4 (t0)
@@ -65,7 +66,7 @@ InitMapper31:
 // Set up initial banks
   ls_gp(sd r0, mapper_31_prgrom_banks)
   lli cpu_t0, 0xFF
-  jal WriteMapper31
+  jal Write
   lli cpu_t1, 0x5FFF
 
   lli t0, 7-1
@@ -73,7 +74,7 @@ InitMapper31:
   sb t0, -8 (sp)
 
   lli cpu_t0, 0
-  jal WriteMapper31
+  jal Write
   addi cpu_t1, t0, 0x5FF8
 
   lbu t0, -8 (sp)
@@ -84,7 +85,7 @@ InitMapper31:
   jr ra
   addi sp, -16
 
-WriteMapper31:
+Write:
   andi t0, cpu_t1, 0b111
   add t1, t0, gp
   sb cpu_t0, mapper_31_prgrom_banks - gp_base (t1)
@@ -150,6 +151,7 @@ if {defined LOG_MAPPER_31} {
 // Tail call
   j TLB.Map4K_2
   mtc0 t3, Index
+}
 
 begin_bss()
 align(8)

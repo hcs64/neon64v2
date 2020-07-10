@@ -1,6 +1,7 @@
 // Mapper 10: FxROM, MMC4
 
-InitMapper10:
+scope Mapper10: {
+Init:
   addi sp, 8
   sw ra, -8 (sp)
 
@@ -12,6 +13,9 @@ InitMapper10:
   bnez t0,-
   addi t0, -1
 
+  ls_gp(sb r0, mapper10_latch + 0)
+  ls_gp(sb r0, mapper10_latch + 1)
+
 // 2x16K
   jal TLB.AllocateVaddr
   lui a0, 0x1'0000 >> 16  // align 64k to leave a 32k guard page unmapped
@@ -21,7 +25,7 @@ InitMapper10:
 
 
 // 0x8000-0x1'0000
-  la_gp(t1, WriteMapper10)
+  la_gp(t1, Write)
   addi a0, -0x8000
   lli t2, 0
   lli t3, 0x80
@@ -41,23 +45,31 @@ InitMapper10:
 
 // Initial bank setup
   lli cpu_t0, 0
-  jal WriteMapper10
+  jal Write
   lli cpu_t1, 0xa000
 
   lli t0, 0xfd
-  jal Mapper10Latch
+  jal Latch
   lli t1, 0x0000
 
   lli t0, 0xfd
-  jal Mapper10Latch
+  jal Latch
   lli t1, 0x1000
+
+// Load our hooked PPU
+  load_overlay_from_rom(ppu_overlay, mmc4)
+
+  la a0, 0
+  la_gp(a1, ppu_mmc4.FrameLoop)
+  jal Scheduler.ScheduleTaskFromNow
+  lli a2, ppu_task
 
   lw ra, -8 (sp)
   jr ra
   addi ra, -8
 
 
-scope WriteMapper10: {
+Write:
 // cpu_t0: value
 // cpu_t1: address
   srl t0, cpu_t1, 12
@@ -126,7 +138,7 @@ chrrom_fe_1:
   bne t0, t2,+
   nop
   andi t1, 0b10
-  jal Mapper10Latch
+  jal Latch
   sll t1, 12-1
 
   lw ra, cpu_rw_handler_ra (r0)
@@ -134,9 +146,8 @@ chrrom_fe_1:
 
   jr ra
   nop
-}
 
-Mapper10Latch:
+Latch:
 // t0: The tile idx
 // t1: Pattern table base (+fine y)
   andi t4, t1, 0x1000
@@ -166,6 +177,7 @@ Mapper10Latch:
   sw t2, ppu_map + 2*4 (t4)
   jr ra
   sw t2, ppu_map + 3*4 (t4)
+}
 
 begin_bss()
 mapper10_prgrom_vaddr:; dw 0

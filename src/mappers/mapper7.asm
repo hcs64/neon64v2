@@ -1,6 +1,7 @@
 // Mapper 7: AxROM
 
-InitMapper7:
+scope Mapper7: {
+Init:
   addi sp, 8
   sw ra, -8(sp)
 
@@ -13,7 +14,7 @@ InitMapper7:
 
 // 0x8000-0x1'0000
   addi t0, a0, -0x8000
-  la_gp(t1, WriteMapper7)
+  la_gp(t1, Write)
   lli t2, 0
   lli t3, 0x80
 
@@ -35,16 +36,16 @@ InitMapper7:
   addi t2, 4
 
 // Initially map PRG ROM bank 0, Nametable 0
-  j WriteMapper7_alt
+  j Write_alt
   lli cpu_t0, 0
 
-WriteMapper7:
+Write:
 // cpu_t0: data
 // cpu_t1: address (unused)
   addi sp, 8
   sw ra, -8(sp)
 
-WriteMapper7_alt:
+Write_alt:
   sll t0, cpu_t0, 15  // 32k PRG ROM bank
 
   ls_gp(lw a1, prgrom_start_phys)
@@ -68,6 +69,7 @@ WriteMapper7_alt:
   lw ra, -8(sp)
   j SingleScreenMirroring
   addi sp, -8
+}
 
 begin_bss()
 align(4)

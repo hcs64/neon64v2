@@ -32,7 +32,6 @@ Desired features:
 - Controller 2
 - 4 player via Four Score
 - PAL NES mode switch at runtime
-- Mapper 9 & 10 switch at runtime (overlay?)
 - Proper text and profiling in PAL mode
 - Remember PAL setting per-game
 - Control remapping
@@ -67,13 +66,11 @@ Easy
 - 69 (Sunsoft FME-7, Gimmick!, etc)
 
 Known bugs:
-- Streemerz uses a bad opcode (by design) after Faux logo
 - Bill & Ted palette messes up when dialog boxes come up. - Needs mid-frame palette change (also Wizards & Warriors)
-- Battletoads intro: a line of bad scroll (?) under the logo, during the quick
-  pan the planet sometimes flashes into the upper screen (check hw?)
-- Rad Racer - single lines out of place (check hw?)
-- Jurassic Park - Ocean logo on the title screen seems to have a few lines out of place (check hw?)
+- Rad Racer - single lines out of place (probably mid-line fine X), game over map is corrupt
+- Jurassic Park - Ocean logo on the title screen has a few lines out of place, probably mid-line fine X
 - Pop when shooting sword in Zelda is irritatingly loud
 - Some audio glitching in Mega Man 2 intro (check hw?)
 - Big Nose Freaks Out doesn't get in-game. Needs IRQ?
 - A line is out of place on the Mike Tyson's Punch Out title screen
+- Scroll artifact is out of place in SMB3

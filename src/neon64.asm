@@ -17,7 +17,7 @@ macro close_output_file() {
   output "/dev/null"
 }
 macro reopen_output_file() {
-  output "{OUTPUT_FILE}"
+  output {OUTPUT_FILE}
 }
 
 if !({defined NES_TIMING} || {defined PAL_NES}) {
@@ -34,7 +34,8 @@ N64_HEADER(Entrypoint, "Neon64 2.0-WIPPALNES")
 }
 insert "lib/N64_BOOTCODE.BIN"
 
-base 0x8000'1000
+define RESIDENT_BASE(0x8000'1000)
+base {RESIDENT_BASE}
 Entrypoint:
   j Start
   nop
@@ -213,6 +214,7 @@ DisplayDebugAndHalt:
 
 include "exception.asm"
 include "tlb.asm"
+include "overlay.asm"
 include "vi.asm"
 include "ai.asm"
 include "rsp.asm"
@@ -233,6 +235,8 @@ include "rom.asm"
 include "menu.asm"
 include "save.asm"
 include "lib/debug_print.asm"
+
+emit_overlay_index()
 
 begin_bss()
 align_dcache()
@@ -290,6 +294,10 @@ if bss_pc > last_backfill {
   error "underflow into bss"
 }
 
+align(8)
+
+base pc() - base() + rom_cart_addr
+
 if {defined ERR_EMBED1} {
 align(8)
 err_embed_rom1:
@@ -301,8 +309,11 @@ err_embed_rom2:
   insert "{ERR_EMBED2}"
 }
 
+emit_overlays()
+
 if 1 != 1 {
 origin 0x10'1000
+
 //insert ""
 
 align(512)

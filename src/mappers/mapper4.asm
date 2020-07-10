@@ -5,7 +5,8 @@
 constant mmc3_prgrom_page_shift(13) // 8K
 constant mmc3_chrrom_page_shift(10) // 1K
 
-scope InitMapper4: {
+scope Mapper4: {
+Init:
   addi sp, 8
   sw ra, -8 (sp)
 
@@ -51,7 +52,7 @@ scope InitMapper4: {
 
 // Map PRG
   ls_gp(lw t0, mmc3_prgrom_vaddr)
-  la_gp(t1, WriteMapper4)
+  la_gp(t1, Write)
   addi t0, -0x8000
   lli t2, 0
   lli t3, 0x80
@@ -87,16 +88,18 @@ scope InitMapper4: {
 
 // Default ROM header mirroring is ok for init
 
-// Hook scanline counter
-  la_gp(t0, MMC3ScanlineCounter)
-  ls_gp(sw t0, scanline_counter_hook)
+// Load our hooked PPU
+  load_overlay_from_rom(ppu_overlay, mmc3)
+  la a0, 0
+  la_gp(a1, ppu_mmc3.FrameLoop)
+  jal Scheduler.ScheduleTaskFromNow
+  lli a2, ppu_task
 
   lw ra, -8 (sp)
   jr ra
   addi sp, -8
-}
 
-WriteMapper4:
+Write:
 // cpu_t0: value
 // cpu_t1: address
 
@@ -136,7 +139,7 @@ if {defined LOG_MMC3} {
   jr t0
   nop
 
-MMC3ScanlineCounter:
+ScanlineCounter:
   ls_gp(lbu t0, mmc3_scanline_counter)
   ls_gp(lbu t2, mmc3_scanline_latch)
   bnez t0,+
@@ -458,6 +461,7 @@ MMC3IRQEnable:
 // cpu_t1 is the address, lsb is 1, so this will serve to write nonzero
   jr ra
   ls_gp(sb cpu_t1, mmc3_irq_enabled)
+}
 
 begin_bss()
 align(8)

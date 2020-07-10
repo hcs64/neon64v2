@@ -1,8 +1,31 @@
-// TODO This is only used on ROM load so could be swapped out. All mappers should probably be overlays.
+// TODO This is only used on ROM load so could be swapped out.
 
 constant max_rom_size(0x10'0000)
 constant prgrom_page_shift(14)  // 16K
 constant chrrom_page_shift(13)  // 8K
+
+begin_overlay_region(mapper_overlay)
+begin_overlay(1)
+include "mappers/mapper1.asm"
+begin_overlay(2)
+include "mappers/mapper2.asm"
+begin_overlay(3)
+include "mappers/mapper3.asm"
+begin_overlay(4)
+include "mappers/mapper4.asm"
+begin_overlay(7)
+include "mappers/mapper7.asm"
+begin_overlay(9)
+include "mappers/mapper9.asm"
+begin_overlay(10)
+include "mappers/mapper10.asm"
+begin_overlay(30)
+include "mappers/mapper30.asm"
+begin_overlay(31)
+include "mappers/mapper31.asm"
+begin_overlay(71)
+include "mappers/mapper71.asm"
+end_overlay_region()
 
 LoadROM:
   addi sp, 8
@@ -39,10 +62,10 @@ scope {
 // Randomly choose a ROM, 3/4 chance of #1
   mfc0 t0, Count
   andi t0, 0b11
-  la a0, rom_cart_addr + (err_embed_rom1 - 0x8000'0000)
+  la a0, err_embed_rom1
   bnez t0, _3_4
   la_gp(ra, still_fail)
-  la a0, rom_cart_addr + (err_embed_rom2 - 0x8000'0000)
+  la a0, err_embed_rom2
 _3_4:
   j LoadNESHeader
   la_gp(a3, yes_indeed)
@@ -152,38 +175,37 @@ still_fail:
   andi t1, 0xf0 // high mapper
   or t0, t1
 
-  la_gp(ra, mapper_ok)
-
 // Defaults are tailored to mapper 0, just set up TLB
   beqz t0, MapPrgRom16_32
-  lli t2, 1
-  beq t0, t2, InitMapper1
-  lli t2, 2
-  beq t0, t2, InitMapper2
-  lli t2, 3
-  beq t0, t2, InitMapper3
-  lli t2, 4
-  beq t0, t2, InitMapper4
-  lli t2, 7
-  beq t0, t2, InitMapper7
-if {defined MAPPER9} {
-  lli t2, 9
-  beq t0, t2, InitMapper9
+  la_gp(ra, mapper_ok)
+
+macro consider_mapper(id) {
+  lli t2, {id}
+  bne t0, t2,+
+  nop
+  load_overlay_from_rom(mapper_overlay, {id})
+  j Mapper{id}.Init
+  la_gp(ra, mapper_ok)
++
 }
-if {defined MAPPER10} {
-  lli t2,10
-  beq t0, t2, InitMapper10
-}
-  lli t2, 30
-  beq t0, t2, InitMapper30
-  lli t2, 31
-  beq t0, t2, InitMapper31
-  lli t2, 71
-  beq t0, t2, InitMapper71
+  consider_mapper(1)
+  consider_mapper(2)
+  consider_mapper(3)
+  consider_mapper(4)
+  consider_mapper(7)
+  consider_mapper(9)
+  consider_mapper(10)
+  consider_mapper(30)
+  consider_mapper(31)
+  consider_mapper(71)
 // HACK pretend 206 is 4
   lli t2, 206
-  beq t0, t2, InitMapper4
+  bne t0, t2,+
   nop
+  load_overlay_from_rom(mapper_overlay, 4)
+  j Mapper4
+  la_gp(ra, mapper_ok)
++
 
 // Unsupported mapper
   addi sp, 8
@@ -381,6 +403,7 @@ end:
   jr ra
   addi sp, -8
 
+
 bad_page_count:
   jal PrintStr0
   la_gp(a0, mapper_limits)
@@ -396,6 +419,39 @@ mapper_limits:
 
 align(4)
 }
+
+// Shared with 2, 30, 71
+// a0: write handler
+InitUxPRGROM:
+  addi sp, 16
+  sw a0, -8 (sp)
+  sw ra, -16 (sp)
+
+  ls_gp(sb r0, uxrom_prgrom_bank)
+
+// 2x16K
+  jal TLB.AllocateVaddr
+  lui a0, 0x1'0000 >> 16  // align 64k to leave a 32k guard page unmapped
+
+  ls_gp(sw a0, uxrom_prgrom_vaddr)
+  ls_gp(sb a1, uxrom_prgrom_tlb_index)
+
+// 0x8000-0x1'0000
+  addi t0, a0, -0x8000
+  lw t1, -8 (sp)
+  lli t2, 0
+  lli t3, 0x80
+
+-
+  sw t0, cpu_read_map + 0x80 * 4 (t2)
+  sw t1, cpu_write_map + 0x80 * 4 (t2)
+  addi t3, -1
+  bnez t3,-
+  addi t2, 4
+
+  lw ra, -16 (sp)
+  jr ra
+  addi sp, -16
 
 begin_bss()
 align_dcache()
@@ -414,24 +470,13 @@ chrrom_start:; dw 0
 prgrom_mask:; dw 0
 chrrom_mask:; dw 0
 
-end_bss()
+uxrom_prgrom_vaddr:;  dw 0
+uxrom_prgrom_bank:; db 0
+uxrom_prgrom_tlb_index:; db 0
 
-// TODO we may want to overlay the mappers to save cache
-align_icache()
-include "mappers/mapper1.asm"
-include "mappers/mapper2.asm"
-include "mappers/mapper3.asm"
-include "mappers/mapper4.asm"
-include "mappers/mapper7.asm"
-if {defined MAPPER9} {
-include "mappers/mapper9.asm"
-}
-if {defined MAPPER10} {
-include "mappers/mapper10.asm"
-}
-include "mappers/mapper30.asm"
-include "mappers/mapper31.asm"
-include "mappers/mapper71.asm"
+align(4)
+
+end_bss()
 
 iNES:
   db "NES",0x1a

@@ -1,20 +1,21 @@
 // Mapper 30: UNROM 512
 
-InitMapper30:
+scope Mapper30: {
+Init:
   addi sp, 8
   sw ra, -8 (sp)
 
   jal InitUxPRGROM
-  la_gp(a0, WriteMapper30)
+  la_gp(a0, Write)
 
-  jal WriteMapper30
+  jal Write
   lli cpu_t0, 0
 
   lw ra, -8 (sp)
   jr ra
   addi sp, -8
 
-scope WriteMapper30: {
+Write:
   addi sp, 8
   sw ra, -8 (sp)
 

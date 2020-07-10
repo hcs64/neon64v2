@@ -2,7 +2,8 @@
 
 //define LOG_MMC1()
 
-scope InitMapper1: {
+scope Mapper1: {
+Init:
   addi sp, 8
   sw ra, -8(sp)
 
@@ -23,7 +24,7 @@ scope InitMapper1: {
 
 // Map PRG
   ls_gp(lw t0, mmc1_prgrom_vaddr)
-  la t1, WriteMapper1
+  la t1, Write
   addi t0, -0x8000
   lli t2, 0
   lli t3, 0x80
@@ -36,7 +37,7 @@ scope InitMapper1: {
   addi t2, 4
 
 // Initialize reg jump table
-  la t2, WriteMapper1.update_ctrl
+  la t2, update_ctrl
   ls_gp(sw t2, mmc1_write_reg_jump_table+0*4)
 
 // Set up with initial register values
@@ -50,7 +51,6 @@ scope InitMapper1: {
   lw ra, -8(sp)
   jr ra
   addi sp, -8
-}
 
 align(8)
 MMC1PrgModes:
@@ -170,7 +170,7 @@ MMC1Chr1Mode1:
   jr ra
   sw t1, ppu_map + 7*4 (r0)
 
-scope WriteMapper1: {
+Write:
 // cpu_t0: value
 // cpu_t1: address
   sw ra, cpu_rw_handler_ra (r0)

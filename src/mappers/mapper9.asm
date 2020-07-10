@@ -1,6 +1,7 @@
 // Mapper 9: PxROM, MMC2
 
-InitMapper9:
+scope Mapper9 {
+Init:
   addi sp, 8
   sw ra, -8 (sp)
 
@@ -11,6 +12,8 @@ InitMapper9:
   addi t1, -1
   bnez t0,-
   addi t0, -1
+
+  ls_gp(sh r0, mapper9_latch0)
 
 // 0x8000, 8K
   jal TLB.AllocateVaddr
@@ -38,7 +41,7 @@ InitMapper9:
   sub a3, t0
   lli t0, 0xc000
   sub t0, a0, t0
-  la_gp(t1, WriteMapper9)
+  la_gp(t1, Write)
   lli t2, 0
   lli t3, 0x20
 
@@ -73,21 +76,28 @@ InitMapper9:
 
 // Initial bank setup
   lli cpu_t0, 0
-  jal WriteMapper9
+  jal Write
   lli cpu_t1, 0xa000
 
-  jal Mapper9Latch0
+  jal Latch0
   lli t0, 0x0fd0
 
-  jal Mapper9Latch1
+  jal Latch1
   lli t0, 0xfd
+
+// Load our hooked PPU
+  load_overlay_from_rom(ppu_overlay, mmc2)
+  la a0, 0
+  la_gp(a1, ppu_mmc2.FrameLoop)
+  jal Scheduler.ScheduleTaskFromNow
+  lli a2, ppu_task
 
   lw ra, -8 (sp)
   jr ra
   addi ra, -8
 
 
-scope WriteMapper9: {
+Write:
 // cpu_t0: value
 // cpu_t1: address
   srl t0, cpu_t1, 12
@@ -132,9 +142,8 @@ chrrom_fe_1:
 // TODO PPU catchup?
   jr ra
   nop
-}
 
-Mapper9Latch0:
+Latch0:
 // t0: Matching pattern addr, -8
   ls_gp(lw t1, chrrom_start)
 
@@ -154,7 +163,7 @@ Mapper9Latch0:
   jr ra
   sw t2, ppu_map + 3*4 (r0)
 
-Mapper9Latch1:
+Latch1:
 // t0: The tile idx
   ls_gp(lw t1, chrrom_start)
 
@@ -174,6 +183,7 @@ Mapper9Latch1:
   sw t2, ppu_map + 6*4 (r0)
   jr ra
   sw t2, ppu_map + 7*4 (r0)
+}
 
 begin_bss()
 mapper9_prgrom_vaddr:; dw 0,0,0
