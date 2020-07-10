@@ -132,10 +132,10 @@ BuildMain:
 +
 
   jal AddItem
-  la_gp(a0, model_switch_menu_item)
+  la_gp(a0, debug_menu_item)
 
   jal AddItem
-  la_gp(a0, debug_menu_item)
+  la_gp(a0, model_switch_menu_item)
 
   jal AddItem
   la_gp(a0, about_menu_item)
