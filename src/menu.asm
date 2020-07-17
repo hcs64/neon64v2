@@ -7,7 +7,6 @@ scope Menu: {
 Init:
   ls_gp(sh r0, prev_buttons)
   ls_gp(sb r0, profile_bars_enabled)
-  ls_gp(sb r0, switch_model_requested)
   ls_gp(sb r0, menu_enabled)
   jr ra
   nop
@@ -182,8 +181,10 @@ BuildAbout:
   jal StartBuild
   nop
 
-  la t0, (margin + (1 + 8*width)*8)*2
-  ls_gp(sw t0, menu_fb_offset)
+  lli t0, margin+8
+  ls_gp(sb t0, menu_fb_x)
+  lli t0, 4*8
+  ls_gp(sb t0, menu_fb_y)
 
   la_gp(t0, AboutHeader)
   ls_gp(sw t0, menu_header_proc)
@@ -213,6 +214,10 @@ Display:
 
   jal ResetDebug
   nop
+
+  ls_gp(lbu a0, menu_fb_x)
+  jal VI.PrintDebugToScreenRDP.Start
+  ls_gp(lbu a1, menu_fb_y)
 
   ls_gp(lw t0, menu_header_proc)
   beqz t0,+
@@ -269,16 +274,14 @@ Display:
   nop
 +
 
-  lui a0, VI_BASE
-  lw a0, VI_ORIGIN (a0)
-	ls_gp(lw t0, menu_fb_offset)
-  add a0, t0
-  lui t0, 0xa000
-  or a0, t0
-  jal VI.PrintDebugToScreen
-  nop
+  ls_gp(lbu a0, menu_fb_x)
+  jal VI.PrintDebugToScreenRDP.Continue
+  ls_gp(lbu a1, menu_fb_y)
 
   jal ResetDebug
+  nop
+
+  jal VI.PrintDebugToScreenRDP.Render
   nop
 
   lw ra, -16 (sp)
@@ -289,8 +292,10 @@ StartBuild:
   lli t0, menu_default_width
   ls_gp(sb t0, menu_min_width)
 
-  la t0, (margin + (4 + 8*width)*8)*2
-	ls_gp(sw t0, menu_fb_offset)
+  lli t0, margin + 4*8
+  ls_gp(sb t0, menu_fb_x)
+  lli t0, 4*8
+  ls_gp(sb t0, menu_fb_y)
 
   ls_gp(sw r0, menu_header_proc)
   ls_gp(sw r0, menu_footer_proc)
@@ -332,6 +337,21 @@ MainHeader:
 AboutHeader:
   addi sp, 8
   sw ra, -8(sp)
+
+  ls_gp(lw t2, text_dlist_ptr)
+
+  la_gp(t4, TextStaticDlist.AboutBackdropRect)
+  lli t3, (TextStaticDlist.AboutBackdropRectEnd-TextStaticDlist.AboutBackdropRect)/8
+
+-
+  ld t0, 0(t4)
+  addi t4, 8
+  sd t0, 0(t2)
+  addi t3, -1
+  bnez t3,-
+  addi t2, 8
+
+  ls_gp(sw t2, text_dlist_ptr)
 
   la_gp(a0, n64_header + 0x20)
   jal PrintStr0
@@ -387,7 +407,7 @@ align(8)
 menu_item(ok_menu_item, ok_menu_msg, Menu.Stub, exit_menu_flag)
 menu_item(dismiss_menu_item, dismiss_menu_msg, Menu.Stub, exit_menu_flag)
 menu_item(save_ram_sram_menu_item, save_ram_sram_menu_msg, SaveExtraRAMToSRAM, exit_menu_flag)
-menu_item(model_switch_menu_item, model_switch_menu_msg, RequestSwitchModel, exit_menu_flag)
+menu_item(model_switch_menu_item, model_switch_menu_msg, SwitchModel, exit_menu_flag)
 menu_item(debug_menu_item, debug_menu_msg, Menu.BuildDebug, 0)
 
 menu_item(debug_menu_back_item, back_msg, Menu.BuildMain, 0)
@@ -453,14 +473,14 @@ active_menu_items:; fill 8*max_menu_items
 
 menu_header_proc:; dw 0
 menu_footer_proc:; dw 0
-menu_fb_offset:; dw 0
 
 prev_buttons:; dh 0
 about_menu_scroll:; dh 0
 
+menu_fb_x:; db 0
+menu_fb_y:; db 0
 profile_bars_enabled:; db 0
 menu_enabled:; db 0
-switch_model_requested:; db 0
 menu_exit_requested:; db 0
 menu_item_count:; db 0
 menu_min_width:; db 0

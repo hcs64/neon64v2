@@ -210,7 +210,8 @@ align(4)
   begin_bss()
 
   align(8)
-debug_buffer:;        fill 1024
+constant debug_buffer_size(1024)
+debug_buffer:;        fill debug_buffer_size
   align(4)
 debug_buffer_cursor:; fill 4
 

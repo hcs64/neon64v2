@@ -15,6 +15,8 @@ constant tlut_fg_tile(5)
 constant pal_bg_tmem(0x800)
 constant pal_fg_tmem(0x800+0x20*2*4)
 
+  Sync_Pipe
+
   Set_Scissor 0<<2,0<<2, 0,0, (width-1)<<2,(height-1)<<2 // Set Scissor: XH 0.0,YH 0.0, Scissor Field Enable Off,Field Off, XL width.0,YL height.0
   Set_Other_Modes CYCLE_TYPE_FILL // Set Other Modes
 SetColorImageCmd:
@@ -132,6 +134,7 @@ render_dlist(1)
 
 if {defined PROFILE_BARS} {
 scope ProfDlist: {
+  Sync_Pipe
   Set_Scissor 0<<2,0<<2, 0,0, (width-1)<<2,(height-1)<<2
   Set_Other_Modes CYCLE_TYPE_FILL
 
@@ -140,7 +143,6 @@ constant frame_x(margin)
 constant frame_y(240-28)
 constant frame_w(256)
 constant frame_h(16)
-  Sync_Pipe
   Set_Fill_Color $0001'0001
   Fill_Rectangle (frame_x+frame_w-1)<<2,(frame_y+frame_h-1)<<2, frame_x<<2,frame_y<<2
 
@@ -230,5 +232,114 @@ EndSync:
 }
 
 align(DCACHE_LINE)
+
+scope TextStaticDlist: {
+constant render_font_b0_tile(0)
+constant render_font_b1_tile(1)
+constant render_font_b2_tile(2)
+constant render_font_b3_tile(3)
+constant load_font_tile(4)
+constant tlut_tile(5)
+constant font_tmem(0)
+constant tlut_tmem(0x800)
+constant pal_b0(0)
+constant pal_b1(1)
+constant pal_b2(2)
+constant pal_b3(3)
+constant pal_inv_b0(4)
+constant pal_inv_b1(5)
+constant pal_inv_b2(6)
+constant pal_inv_b3(7)
+
+evaluate dsdx(4<<10)
+evaluate dtdy(1<<10)
+
+  Sync_Pipe
+
+  Set_Other_Modes EN_TLUT|CVG_DEST_ZAP|ALPHA_COMPARE_EN|CYCLE_TYPE_COPY
+
+  Sync_Tile
+  Set_Tile 0,0,0, tlut_tmem/8, tlut_tile, 0, 0,0,0,0, 0,0,0,0
+
+evaluate rep_i(0)
+
+  Set_Tile IMAGE_DATA_FORMAT_COLOR_INDX,SIZE_OF_PIXEL_8B,0, font_tmem/8, load_font_tile,0, 0,0,0,0, 0,0,0,0
+while {rep_i} < 4 {
+  Set_Tile IMAGE_DATA_FORMAT_COLOR_INDX,SIZE_OF_PIXEL_4B,256*8/4/2/8, font_tmem/8, render_font_b{rep_i}_tile,pal_b{rep_i}, 0,0,0,0, 0,0,0,0
+  Set_Tile_Size 0,0,render_font_b{rep_i}_tile,(256*8/4-1)<<2,(8-1)<<2
+evaluate rep_i({rep_i}+1)
+}
+
+  Sync_Load
+  Set_Texture_Image IMAGE_DATA_FORMAT_RGBA,SIZE_OF_PIXEL_16B,0, TextStaticDlist.Palette&0x7f'ffff
+  Load_Tlut 0<<2,0<<2, tlut_tile, 127<<2,0<<2 // Load Tlut: SL 0.0,TL 0.0, SH 127.0,TH 0.0
+
+  Sync_Load
+  Set_Texture_Image IMAGE_DATA_FORMAT_COLOR_INDX,SIZE_OF_PIXEL_8B,0, rdpfont&0x7f'ffff
+  Load_Block 0, 0, load_font_tile, (256/4*8*8/2)-1, 2048/(256/4*8/2/8)
+
+align(16)
+End:
+SyncFull:
+  Sync_Full
+
+SetNormal:
+  Sync_Tile
+evaluate rep_i(0)
+while {rep_i} < 4 {
+  Set_Tile IMAGE_DATA_FORMAT_COLOR_INDX,SIZE_OF_PIXEL_4B,256*8/4/2/8, font_tmem/8, render_font_b{rep_i}_tile,pal_b{rep_i}, 0,0,0,0, 0,0,0,0
+evaluate rep_i({rep_i}+1)
+}
+SetNormalEnd:
+
+SetInverse:
+  Sync_Tile
+evaluate rep_i(0)
+while {rep_i} < 4 {
+  Set_Tile IMAGE_DATA_FORMAT_COLOR_INDX,SIZE_OF_PIXEL_4B,256*8/4/2/8, font_tmem/8, render_font_b{rep_i}_tile,pal_inv_b{rep_i}, 0,0,0,0, 0,0,0,0
+evaluate rep_i({rep_i}+1)
+}
+SetInverseEnd:
+
+TextureRectangleTemplate:
+  Texture_Rectangle 0,0, 0, 0,0, 0,0, {dsdx},{dtdy}
+
+AboutBackdropRect:
+  Set_Fill_Color $0001'0001
+  Fill_Rectangle (margin+31*8)<<2,(13*8)<<2, (margin+8)<<2,(3*8)<<2
+AboutBackdropRectEnd:
+
+align(8)
+Palette:
+// 0-4: Each palette selects a 1bpp plane
+evaluate rep_j(0)
+while {rep_j} < 4 {
+  evaluate rep_i(0)
+  while {rep_i} < 16 {
+    if {rep_i} & (1<<{rep_j}) == 0 {
+      dh 0x0001
+    } else {
+      dh 0xffff
+    }
+    evaluate rep_i({rep_i}+1)
+  }
+  evaluate rep_j({rep_j}+1)
+}
+
+// 4-8: Invert video
+evaluate rep_j(0)
+while {rep_j} < 4 {
+  evaluate rep_i(0)
+  while {rep_i} < 16 {
+    if {rep_i} & (1<<{rep_j}) == 0 {
+      dh 0xffff
+    } else {
+      dh 0x0001
+    }
+    evaluate rep_i({rep_i}+1)
+  }
+  evaluate rep_j({rep_j}+1)
+}
+}
 
 arch n64.cpu

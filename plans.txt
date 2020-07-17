@@ -13,8 +13,6 @@ Architecture ideas:
   make some mid-frame effects easier.
 - If I want expansion audio, the RSP scheduler needs to swap ucode, and/or
   I have to optimize for space.
-- Text rendering should use the RSP+RDP rather than uncached writes
-  on the CPU.
 
 Missing features needed for better accuracy:
 - Mid-frame palette changes

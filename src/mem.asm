@@ -1,13 +1,26 @@
 // Memory layout
 
+// MB 1
+constant nes_rom(0x8010'0000)
+
+// MB 0
+// Allocate back from the end of the first MB
+constant nes_extra_ram_size(0x2000)
+constant nes_extra_ram(nes_rom - nes_extra_ram_size)
+constant nes_extra_ram_save_copy(nes_extra_ram - nes_extra_ram_size)
+constant nes_extra_ram_save_verify(nes_extra_ram_save_copy - nes_extra_ram_size)
+constant chrram(nes_extra_ram_save_verify - 0x8000)
+constant four_screen_ram(chrram - 0x800)
+constant last_backfill(four_screen_ram)
+
 // Low page is 2 4k pages in physical memory
 constant tlb_page_size(0x1000)
-constant low_page_ram_base(0xc000)
-constant low_page_end(low_page_ram_base+(tlb_page_size*2))
+constant low_page_end((last_backfill-0x8000'0000)/0x2000*0x2000)
+constant low_page_ram_base(low_page_end-tlb_page_size*2)
 constant low_page_base(0x2000)
 variable low_page_pc(low_page_base)
 
-constant bss_base(0x8000'0000 + low_page_end)
+constant bss_base(0x8000'e000)
 include "lib/bss.inc"
 
 begin_bss()
@@ -18,16 +31,7 @@ call_stack:
 
 end_bss()
 
-constant nes_rom(0x8010'0000)
-// Allocate back from the end of the first MB
-constant nes_extra_ram_size(0x2000)
-constant nes_extra_ram(nes_rom - nes_extra_ram_size)
-constant nes_extra_ram_save_copy(nes_extra_ram - nes_extra_ram_size)
-constant nes_extra_ram_save_verify(nes_extra_ram_save_copy - nes_extra_ram_size)
-constant chrram(nes_extra_ram_save_verify - 0x8000)
-constant four_screen_ram(chrram - 0x800)
-constant last_backfill(four_screen_ram)
-
+// MB 2
 constant framebuffer0(0xa020'0000)
 constant framebuffer1(0xa024'0000)
 
@@ -35,12 +39,15 @@ constant num_abufs(10)
 // 4 bytes (2 channel 16-bit) per sample
 constant abuf_size((abuf_samples * 4 + 7)/8*8)
 constant audiobuffer(0xa028'0000)
-constant two_end(audiobuffer + abuf_size * num_abufs)
+
+constant text_dlist(audiobuffer + abuf_size * num_abufs)
+constant two_end(text_dlist + (TextStaticDlist.End-TextStaticDlist) + 16*(debug_buffer_size+2))
 
 if two_end > 0xa030'0000 {
 error "out of space in 2nd MB"
 }
 
+// MB 3
 constant rgb_palette0(0x8030'0000)
 constant blank_palette0(rgb_palette0+0x20*2)
 constant rgb_palette1(blank_palette0+0x20*2)

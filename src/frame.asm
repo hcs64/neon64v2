@@ -115,50 +115,17 @@ scope {#} {
   la t1, RenderDlist{idx}.SetColorImageAddr|0xa000'0000
   sw a0, 0(t1)
 
-// Wait for RDP free
-  lui t0, DPC_BASE
--
-  lli t1, 1
-  ls_gp(sb t1, dp_interrupt_wait)
-  lw t1, DPC_STATUS (t0)
-  andi t1, RDP_CMS|RDP_CME // start/end valid
-  beqz t1,+
-  nop
--
-  bnez t1,-
-  ls_gp(lbu t1, dp_interrupt_wait)
-  j --
-  nop
-+
-
-  ls_gp(lbu t0, switch_model_requested)
-  bnez t0, SwitchModel
-  nop
-
-if {defined PROFILE_RDP} {
-  ls_gp(lwu t0, frame_rdp_cycles)
-  lui t1, DPC_BASE
-  lli t2, CLR_CLK
-  sw t2, DPC_STATUS (t1)
-  ls_gp(sw t0, last_frame_rdp_cycles)
-}
-
 // Render!
+  la a0, RenderDlist{idx} & 0x7f'ffff
+  la a1, RenderDlist{idx}.EndSync & 0x7f'ffff
+  lli a2, frame_dlist_idx
 
-  lui t0, DPC_BASE
-  la t1, RenderDlist{idx} & 0x7f'ffff
-if {defined PROFILE_BARS} {
-  ls_gp(lbu t3, profile_bars_enabled)
-  beqz t3, need_to_sync
-  la_hi(t2, RenderDlist{idx}.End & 0x7f'ffff)
-  j end
-  la_lo(t2, RenderDlist{idx}.End & 0x7f'ffff)
-need_to_sync:
-}
-  la t2, RenderDlist{idx}.EndSync & 0x7f'ffff
-end:
-  sw t1, DPC_START (t0)
-  sw t2, DPC_END (t0)
+-
+  syscall QUEUE_DLIST_SYSCALL
+  nop
+  beqz v1,-
+  nop
+
 }
 }
 
@@ -172,11 +139,11 @@ render_dlist_1:
 start_dp_render(1)
 rendered_dlist:
 
-  jal Menu.Display
-  nop
 if {defined PROFILE_BARS} {
 include "profile_bars.asm"
 }
+  jal Menu.Display
+  nop
 
   jal StartFrame
   nop

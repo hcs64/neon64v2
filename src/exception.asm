@@ -2,6 +2,8 @@ constant HW_INT_MIPS(0)
 constant HW_INT_PRE_NMI(2)
 constant TIMER_INT(7)
 
+constant QUEUE_DLIST_SYSCALL(0x10)
+
 //define TRAP_WRITE(APU.There)
 define TRAP_HANG(100'000'000)
 
@@ -288,6 +290,18 @@ high_interrupts:
 // should be unreachable
   eret
 
+if {defined TRAP_HANG} {
+timer_interrupt:
+  jal PrintHeaderInfo
+  nop
+
+  jal PrintStr0
+  la_gp(a0, hang_msg)
+
+  j exception_print2
+  nop
+}
+
 // The only interrupts we're interested in are those from the RCP (interrupt line 0),
 // so don't bother checking for now.
 
@@ -335,19 +349,35 @@ end:
   eret
 }
 
-if {defined TRAP_HANG} {
-timer_interrupt:
-  jal PrintHeaderInfo
-  nop
-
-  jal PrintStr0
-  la_gp(a0, hang_msg)
-
-  j exception_print2
-  nop
-}
-
 not_tlb_modification:
+  lli t0, 8 // syscall
+  bne t0, k1, not_syscall
+  nop
+
+  ls_gp(sd t1, exception_regs + t1*8)
+  ls_gp(sd t2, exception_regs + t2*8)
+// Syscall, check the code
+  dmfc0 t0, EPC
+  lw t1, 0(t0)
+  srl t1, 6
+
+  lli t2, QUEUE_DLIST_SYSCALL
+  bne t1, t2, unhandled_exception
+  nop
+  daddi t0, 4
+
+  dmtc0 t0, EPC
+
+  ls_gp(ld t0, exception_regs + t0*8)
+  ls_gp(ld t1, exception_regs + t1*8)
+  ls_gp(ld t2, exception_regs + t2*8)
+
+  la k0, VI.QueueDlist
+  jalr k1, k0
+  nop
+
+  eret
+not_syscall:
 
 unhandled_exception:
   jal PrintHeaderInfo
@@ -402,6 +432,37 @@ if 1 != 1 {
   jal PrintHex
   lli a1, 16
 
+if 1 == 1 {
+  jal PrintStr0
+  la_gp(a0, newline)
+
+  lui t0, DPC_BASE
+  lw a0, DPC_STATUS (t0)
+  jal PrintHex
+  lli a1, 8
+
+  jal PrintStr0
+  la_gp(a0, newline)
+
+  lui t0, DPC_BASE
+  lw a0, DPC_CURRENT (t0)
+  jal PrintHex
+  lli a1, 8
+
+  lui t0, MI_BASE
+  lw a0, MI_INTR(t0)
+  jal PrintHex
+  lli a1, 8
+
+  lui t0, MI_BASE
+  lw a0, MI_INTR_MASK(t0)
+  jal PrintHex
+  lli a1, 8
+
+  jal PrintStr0
+  la_gp(a0, newline)
+}
+
 if 1 == 0 {
   la_hi(a0, newline)
   jal PrintStr0
@@ -434,7 +495,7 @@ if 1 == 0 {
   lli a1, 8
 }
 
-if 1 == 1 {
+if 1 != 1 {
   la_hi(a0, newline)
   jal PrintStr0
   la_lo(a0, newline)
@@ -457,7 +518,7 @@ if 1 == 1 {
 }
 
 
-if 1 == 1 {
+if 1 != 1 {
   la_hi(a0, newline)
   jal PrintStr0
   la_lo(a0, newline)
@@ -469,6 +530,7 @@ if 1 != 1 {
   sw t1, SP_STATUS (t0)
 }
 
+if 1 == 1 {
   lui t0, SP_MEM_BASE
   lw a0, SP_DMEM + dmem_frames_finished (t0)
   jal PrintHex
@@ -481,6 +543,7 @@ if 1 != 1 {
   ls_gp(lw a0, frames_finished)
   jal PrintHex
   lli a1, 8
+}
 
 }
   mtc0 r0, WatchLo
@@ -492,9 +555,9 @@ if 1 != 1 {
   la t0, framebuffer0
   ls_gp(sw t0, active_framebuffer)
 
-  la a0, framebuffer0 + (16*width+margin)*2
+  la a0, framebuffer0 + (16*width+22)*2
   jal VI.PrintDebugToScreen
-  nop
+  lli a1, 30
 
   jal NewlineAndFlushDebug
   nop

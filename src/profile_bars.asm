@@ -134,11 +134,14 @@ stack_count_profile_bar(ProfDlist.ExceptionsRect)
   or t0, t2
   sw t0, 4 (t1)
 
-  lui a0, DPC_BASE
-  lli t0, CLR_XBS|CLR_FRZ
-  sw t0, DPC_STATUS (a0)
+-
+  la a0, ProfDlist & 0x7f'ffff
+  la a1, ProfDlist.EndSync & 0x7f'ffff
+  lli a2, prof_dlist_idx
 
-  DPCWaitStartEnd()
-  DPC(ProfDlist & 0x7f'ffff, ProfDlist.EndSync & 0x7f'ffff)
+  syscall QUEUE_DLIST_SYSCALL
+  nop
+  beqz v1,-
+  nop
 
 skip_profile_bars:

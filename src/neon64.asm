@@ -140,12 +140,6 @@ Entrypoint:
   j Scheduler.NoTasks
   nop
 
-RequestSwitchModel:
-// Defer until the RDP seems to be calming down
-  lli t0, 1
-  jr ra
-  ls_gp(sb t0, switch_model_requested)
-
 SwitchModel:
   lli t0, 1
   ls_gp(sb t0, rsp_shutdown_requested)
@@ -206,12 +200,13 @@ DisplayDebugAndHalt:
   jal PrintHeaderInfo
   nop
 
+// TODO this loop makes little sense
 -
   ls_gp(lw a0, active_framebuffer)
   beqz a0,-
-  addi a0, (10*width+margin)*2
+  addi a0, (16*width+22)*2
   jal VI.PrintDebugToScreen
-  nop
+  lli a1, 30
 
   jal NewlineAndFlushDebug
   nop
@@ -273,6 +268,8 @@ include "dlist.asm"
 align(8)
 font:
 insert "lib/font.bin"
+rdpfont:
+insert "lib/rdpfont.bin"
 
 startup_message:
   db "Welcome to Neon64!\n",0
@@ -304,8 +301,8 @@ license_message_end:
 
 align(4)
 
-if pc() > (low_page_ram_base | 0x8000'0000) {
-  error "overflow into low page"
+if pc() > bss_base {
+  error "overflow into bss"
 }
 
 if bss_pc > last_backfill {
