@@ -38,7 +38,7 @@ In the profile bars, CPU task time is bright green.
 
 ### PPU
 
-The CPU-side PPU task is `FrameLoop` in `ppu.asm`, broadly: Fetch sprites, fetch background, repeat. The PPU yields for sprite 0 hit and vblank, and between hblank and visible pixels, when per-line changes are likely to occur.
+The CPU-side PPU task is `FrameLoop` in `ppu_task.asm`, broadly: Fetch sprites, fetch background, repeat. The PPU yields for sprite 0 hit and vblank, and between hblank and visible pixels, when per-line changes are likely to occur.
 
 Profiling in an earlier version showed that the hottest loop was checking all 64 sprites on each of 240 lines, so instead sprite evaluation scans OAM once per frame. Each line has a list of up to 8 sprites that occur on that line. Tile fetches are done before the background fetches for each line.
 
