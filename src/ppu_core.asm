@@ -518,6 +518,7 @@ if {defined PPU_MMC4} {
 // TODO This really belongs at the start of visible pixels
   daddi cycle_balance, bg_dummy_nt_pixels * ppu_div
 
+if 1 != 1 {
   lbu t0, ppu_mask (r0)
   andi t0, 0b0000'1000
   bnez t0, bg_render_enabled
@@ -547,6 +548,7 @@ if {defined PPU_MMC4} {
 
   j bg_fetch_flush
   daddi cycle_balance, (bg_fetch_tiles * tile_pixels) * ppu_div
+}
 
 bg_render_enabled:
 
@@ -701,6 +703,50 @@ FetchBG:
   jr ra
   nop
 +
+
+// If rendering was disabled mid-line...
+// Spend cycles, but avoid updating vaddr
+if 1 == 1 {
+  lbu t0, ppu_mask (r0)
+  andi t0, 0b0000'1000
+  bnez t0, fetch_enabled
+  nop
+if 1 == 1 {
+-
+  bgez t8,+
+  nop
+  daddi t8, tile_pixels * ppu_div
+
+  dsll t1, ppu_t0, 16
+  bgezal ppu_t0, nt_full
+  move ppu_t0, t1
+
+  dsll t1, ppu_t1, 8
+  bgezal ppu_t1, at_full
+  move ppu_t1, t1
+
+  bnez ppu_t2,-
+  addi ppu_t2, -1
+
+  sw r0, ppu_catchup_cb (r0)
+
++
+  sub t0, t9, ppu_t2
+
+// track cycles
+  ls_gp(ld t2, ppu_catchup_current_cycle)
+  sll t1, t0, 3 // *8
+  ppu_mul(t1, t3)
+  dadd t2, t1
+  ls_gp(sd t2, ppu_catchup_current_cycle)
+
+  ls_gp(lw ra, ppu_catchup_ra)
+  jr ra
+  nop
+}
+fetch_enabled:
+}
+
 
 // a2: BG pattern table base + fine Y
   lbu a2, ppu_ctrl (r0)

@@ -71,7 +71,6 @@ Known bugs:
 - Some audio glitching in Mega Man 2 intro (check hw?)
 - Big Nose Freaks Out doesn't get in-game, needs DMC IRQ
 - A line is out of place on the Mike Tyson's Punch Out title screen
-- Scroll artifact is out of place in SMB3
 - Aladdin bad opcode on startup
 - Pirates! bad opcode on startup
 - Half of Qix playfield is corrupt
