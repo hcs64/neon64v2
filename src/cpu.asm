@@ -19,6 +19,7 @@ constant flagC(0x01)
 // pending interrupts
 constant intAPUFrame(0x01)
 constant intMMC3(0x02)
+constant intDMC(0x04)
 
 begin_low_page()
 

@@ -69,7 +69,7 @@ Known bugs:
 - Jurassic Park - Ocean logo on the title screen has a few lines out of place, probably mid-line fine X
 - Pop when shooting sword in Zelda is irritatingly loud
 - Some audio glitching in Mega Man 2 intro (check hw?)
-- Big Nose Freaks Out doesn't get in-game, needs DMC IRQ
+- Big Nose Freaks Out timing is off, DMC IRQ needs to be earlier?
 - A line is out of place on the Mike Tyson's Punch Out title screen
 - Aladdin bad opcode on startup
 - Pirates! bad opcode on startup

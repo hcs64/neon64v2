@@ -34,6 +34,7 @@ apu_noise_mode:; db 0
 apu_frame_counter:; db 0
 apu_frame_mode:; db 0
 apu_enable:; db 0
+apu_irqs:; db 0
 apu_dmc_load:; db 0
 
 constant apu_dmc_buffer_size(10)
@@ -70,6 +71,7 @@ Init:
   ls_gp(sb r0, apu_frame_counter)
   ls_gp(sb r0, apu_frame_mode)
   ls_gp(sb r0, apu_enable)
+  ls_gp(sb r0, apu_irqs)
   ls_gp(sb r0, apu_dmc_load)
   ls_gp(sb r0, apu_dmc_buffer_count)
 if {defined LOG_DMC} {
@@ -156,7 +158,7 @@ ResetFrameCounter:
   jr ra
   addi sp, -8
 
-WriteEnable:
+scope WriteEnable: {
 // cpu_t0: Write to 0x4015
   jal Render
   nop
@@ -174,26 +176,47 @@ if {rep_i} == 0 {
 +
 evaluate rep_i({rep_i}+1)
 }
+  lbu t1, irq_pending (r0)
 
-  andi t0, cpu_t0, 0b1'0000 // DMC
+// Clear DMC IRQ
+  ls_gp(lbu t2, apu_irqs)
+  andi t1, intDMC^0xff
+  sb t1, irq_pending (r0)
+  andi t2, 0b0111'1111
+  ls_gp(sb t2, apu_irqs)
+
+  andi t0, cpu_t0, 0b1'0000 // DMC enable
+  beqzl t0, end
+  ls_gp(sh r0, apu_dmc_length_left)
+
+// Start sample if length was 0
+  ls_gp(lhu t0, apu_dmc_length_left)
   bnez t0,+
-  ld t0, task_times + apu_dmc_task*8 (r0)
-// Cancel the DMC task
-  daddi t0, r0, -1
-  sd t0, task_times + apu_dmc_task*8 (r0)
-  j ++
   nop
-+
-// Start DMC if it wasn't started already
-  bgez t0,+
-  nop
-  jal StartDMCRead
+
+  jal DMCSampleStart
   nop
 +
 
+// Start DMC task if not already running
+  ld t1, task_times + apu_dmc_task*8 (r0)
+  bgez t1,+
+  nop
+
+  jal DMCRead
+  nop
+
+  ls_gp(lwu a0, apu_dmc_timer_cycles)
+  la_gp(a1, DMCTask)
+  jal Scheduler.ScheduleTaskFromNow
+  lli a2, apu_dmc_task
++
+
+end:
   lw ra, cpu_rw_handler_ra (r0)
   jr ra
   nop
+}
 
 Write_0:
 // cpu_t0: Write to 0x4000,0x4004,0x4008,0x400c
@@ -412,8 +435,24 @@ WriteDMCFlags:
   nop
   lw ra, cpu_rw_handler_ra (r0)
 
-// TODO IRQ
 // TODO looping, may need to initiate here if loop turns on?
+
+  lbu t1, irq_pending (r0)
+  ls_gp(lb t2, apu_irqs)
+// Clear IRQ if enabled flag is clear
+  andi t0, cpu_t0, 0b1000'0000
+  bnez t0,+
+  andi t1, intDMC^0xff
+  andi t2, 0b0111'1111
+  sb t1, irq_pending (r0)
+  j ++
+  ls_gp(sb t2, apu_irqs)
++
+// Set IRQ if active (bit 7, sign) and enabled flag is set (may have just become enabled)
+  bltz t2,+
+  ori t1, intDMC
+  sb t1, irq_pending (r0)
++
 
   andi t0, cpu_t0, 0b1111
   sll t0, 1
@@ -426,8 +465,18 @@ WriteDMCFlags:
   ls_gp(sh t0, apu_dmc_timer)
 
   ls_gp(sb cpu_t0, apu_dmc_regs + 0)
-  jr ra
+
+  ls_gp(lwu t0, apu_dmc_timer_cycles)
+// Adjust schedule to reflect rate change
+  ld t1, task_times + apu_dmc_task * 8 (r0)
   ls_gp(sw t2, apu_dmc_timer_cycles)
+  bltz t1,+
+  sub t2, t0
+  dadd t1, t2
+  //sd t1, task_times + apu_dmc_task * 8 (r0)
++
+  jr ra
+  nop
 
 WriteDMCLoad:
 // cpu_t0: Write to 0x4011
@@ -459,51 +508,11 @@ WriteDMCSampleLength:
   jal Render
   nop
 
-  ls_gp(lbu t1, apu_enable)
-  ls_gp(sb cpu_t0, apu_dmc_regs + 3)
 
-  andi t1, 0b1'0000
-  beqz t1,+
-  nop
-
-  jal StartDMCRead
-  nop
-+
   lw ra, cpu_rw_handler_ra (r0)
 
   jr ra
-  nop
-
-macro setup_dmc_read() {
-  ls_gp(lbu t1, apu_dmc_regs + 2)
-  ls_gp(lbu t0, apu_dmc_regs + 3)
-  
-  sll t1, 6 // *64
-  ori t1, 0x4000
-  ls_gp(sh t1, apu_dmc_cur_addr)
-
-  sll t0, 4
-  addi t0, 1
-  ls_gp(sh t0, apu_dmc_length_left)
-}
-
-StartDMCRead:
-  addi sp, 8
-  sw ra, -8 (sp)
-
-setup_dmc_read()
-
-  jal DMCRead
-  nop
-
-  ls_gp(lwu a0, apu_dmc_timer_cycles)
-  la_gp(a1, DMCTask)
-  jal Scheduler.ScheduleTaskFromNow
-  lli a2, apu_dmc_task
-
-  lw ra, -8 (sp)
-  jr ra
-  addi sp, -8
+  ls_gp(sb cpu_t0, apu_dmc_regs + 3)
 
 scope DMCRead: {
   addi sp, 8
@@ -531,7 +540,30 @@ scope DMCRead: {
   lw t2, cpu_read_map (t2)
   beqz t1, end
   addi t1, -1
+  bnez t1,++
   ls_gp(sh t1, apu_dmc_length_left)
+
+  ls_gp(lb t4, apu_dmc_regs + 0)
+  ls_gp(lbu t3, apu_irqs)
+  andi t1, t4, 0b0100'0000 // loop
+// Loop enabled?
+  beqz t1,+
+  ori t3, 0b1000'0000
+
+// DMCSampleStart doesn't clobber t0 and t2
+  j DMCSampleStart
+  la_gp(ra,++)
+
++
+// IRQ enabled (bit 7, sign)?
+  bgez t4,+
+  ls_gp(sb t3, apu_irqs)
+
+  lbu t1, irq_pending (r0)
+  ori t1, intDMC
+  sb t1, irq_pending (r0)
+
++
   bgez t2,+
   add t2, t0
 // Not supporting reading from a register
@@ -621,26 +653,36 @@ end:
   addi sp, -8
 }
 
-DMCTaskStart:
-setup_dmc_read()
-DMCTask:
-  jal DMCRead
+// Must not clobber t0 and t2
+DMCSampleStart:
+  ls_gp(lbu t1, apu_dmc_regs + 2)
+  ls_gp(lbu t3, apu_dmc_regs + 3)
+
+  sll t1, 6 // *64
+  ori t1, 0x4000
+  ls_gp(sh t1, apu_dmc_cur_addr)
+
+  sll t3, 4 // *16
+  addi t3, 1
+  ls_gp(sh t3, apu_dmc_length_left)
+
+  jr ra
   nop
 
-  ls_gp(lhu t0, apu_dmc_length_left)
-
-  ls_gp(lbu t1, apu_dmc_regs + 0)
-  bnez t0,+
-  la_gp(ra, DMCTask)
-
-  andi t1, 0b100'0000 // loop
-  beqz t1, Scheduler.FinishTask
-  la_gp(ra, DMCTaskStart)
-+
+DMCTaskLoop:
   ls_gp(lwu t0, apu_dmc_timer_cycles)
-  j Scheduler.Yield
   dadd cycle_balance, t0
- 
+  bgezal cycle_balance, Scheduler.Yield
+  nop
+
+DMCTask:
+  ls_gp(lhu t0, apu_dmc_length_left)
+  beqz t0, Scheduler.FinishTask
+  nop
+
+  j DMCRead
+  la_gp(ra, DMCTaskLoop)
+
 // TODO: technically this might need to be in two parts, a read from
 // the CPU before it increments cycle_balance, then the effect afterwards.
 // But I'm really not sure how that should work.
@@ -648,11 +690,9 @@ ReadStatus:
 // Clear interrupts, return counter and interrupt status
 // Returns value in cpu_t1
 
-// TODO DMC interrupt flag
-
   ls_gp(lw t0, apu_len)
   lbu t2, irq_pending (r0)
-  ls_gp(lbu t3, apu_dmc_length_left)
+  ls_gp(lhu t3, apu_dmc_length_left)
   
 // Calculate lengths == 0
   andi t1, t0, 0xff
@@ -680,13 +720,13 @@ ReadStatus:
   ori cpu_t1, 0b1'0000
 +
 
-// Clear frame IRQ pending, return previous status
-  andi t0, t2, intAPUFrame^0xff
-  andi t2, intAPUFrame
-  beqz t2,+
-  sb t0, irq_pending (r0)
-  ori cpu_t1, 0b0100'0000
-+
+// Clear IRQ pending, return previous status
+  ls_gp(lbu t1, apu_irqs)
+  andi t2, intAPUFrame^0xff
+  sb t2, irq_pending (r0)
+  or cpu_t1, t1
+  andi t1, 0b1011'1111
+  ls_gp(sb t1, apu_irqs)
 
   jr ra
   nop
@@ -850,7 +890,7 @@ _4_step_4:
 
   ls_gp(lbu t1, apu_frame_mode)
   lbu t0, irq_pending (r0)
-  andi t1, 0b0100'0000
+  andi t1, 0b0100'0000 // IRQ inhibit
   bnez t1,+
   ori t0, intAPUFrame
 // TODO fix this, StarsSE hangs with this enabled. Should I assume IRQ inhibit is set on reset?
