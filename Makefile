@@ -27,11 +27,11 @@ all: loader
 clean-all: clean clean-tools
 	rm -f neon64bu.rom
 
-pkg: ntsc pal
+pkg: loader
 	zip --junk-paths neon64v2XXXX.zip pkg/README.txt LICENSE.txt neon64bu.rom
 
 clean:
-	rm -f src/$(NTSC_BIN) src/$(PAL_BIN) src/*.sym src/OVL_*.bin neon64v2XXXX.zip || true
+	rm -f src/$(NTSC_BIN) src/$(PAL_BIN) src/*.sym src/OVL_*.bin neon64v2XXXX.zip
 
 tools/chksum64: tools/chksum64.c
 
