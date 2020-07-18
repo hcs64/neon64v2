@@ -20,7 +20,7 @@ Missing features needed for better accuracy:
 - BG-accurate SP0 hit
 - Bug-accurate Sprite overflow
 - Read of PPU activity
-- Audio IRQs (frame counter, DMC)
+- Audio IRQs (frame counter)
 - Palette deemphasis, greyscale
 - Proper screen size for PAL
 - Video signal parameters (slightly too narrow? starts too late?)
@@ -29,7 +29,6 @@ Desired features:
 - Gameshark version
 - Controller 2
 - 4 player via Four Score
-- Proper text and profiling in PAL mode
 - Remember PAL setting per-game
 - Control remapping
 - Arkanoid paddle
@@ -63,16 +62,17 @@ Easy
 - 69 (Sunsoft FME-7, Gimmick!, etc)
 
 Known bugs:
-- Menus and profiling are busted on non-PAL mode
+- Profiling is wonky in PAL mode
 - Bill & Ted palette messes up when dialog boxes come up. - Needs mid-frame palette change (also Wizards & Warriors)
-- Rad Racer - single lines out of place (probably mid-line fine X), game over map is corrupt
+- Rad Racer - single lines out of place (probably mid-line fine X), game over map is corrupt (different MMC1 board?)
 - Jurassic Park - Ocean logo on the title screen has a few lines out of place, probably mid-line fine X
 - Pop when shooting sword in Zelda is irritatingly loud
 - Some audio glitching in Mega Man 2 intro (check hw?)
-- Big Nose Freaks Out timing is off, DMC IRQ needs to be earlier?
+- Big Nose Freaks Out in-game timing is a mess, DMC IRQ needs to be earlier?
 - A line is out of place on the Mike Tyson's Punch Out title screen
 - Aladdin bad opcode on startup
 - Pirates! bad opcode on startup
 - Half of Qix playfield is corrupt
-- Nobunaga's Ambition title screen and in-game are messed up (check?)
+- Nobunaga's Ambition title screen and in-game are messed up (needs an MMC1 board variant)
 - Bashi Bazook (proto) locks up on load, needs NES 2.0?
+- Monster Party - flickering line above status bar

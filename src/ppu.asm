@@ -88,25 +88,25 @@ constant vblank_delay(1)
 begin_overlay_region(ppu_overlay)
 begin_overlay(base)
 scope ppu_base {
-include "ppu_core.asm"
+include "ppu_task.asm"
 }
 
 begin_overlay(mmc2)
 scope ppu_mmc2 {
 define PPU_MMC2()
-include "ppu_core.asm"
+include "ppu_task.asm"
 }
 
 begin_overlay(mmc3)
 scope ppu_mmc3 {
 define PPU_MMC3()
-include "ppu_core.asm"
+include "ppu_task.asm"
 }
 
 begin_overlay(mmc4)
 scope ppu_mmc4 {
 define PPU_MMC4()
-include "ppu_core.asm"
+include "ppu_task.asm"
 }
 
 end_overlay_region()

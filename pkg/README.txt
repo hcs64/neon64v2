@@ -98,6 +98,9 @@ Version history
   - Add mappers 9, 10 (MMC2, MMC4)
   - Mid-line changes can now take effect (e.g. Marble Madness)
   - Overlays, so mappers can modify the core PPU loop
+  - PAL switching
+  - Improved MMC3 IRQ timing
+  - DMC IRQ
   - Scheduler tweaks
 
 2020-07-07 - beta 2

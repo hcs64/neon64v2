@@ -6,15 +6,11 @@ This project uses [ARM9's fork of the bass assembler](https://github.com/ARM9/ba
 
     make
 
-This will fetch bass, build the tools (bass and chksum64), and build the NTSC NES version as neon64bu.rom.
-
-To build the PAL NES version (neon64bu_pal.rom), run `make pal`, or `make all` to do both. `make pkg` builds the release .zip.
+This will fetch bass, build the tools (bass and chksum64), and build neon64bu.rom. `make pkg` builds the release .zip.
 
 ## Overview
 
-TODO: Update to reflect changes since beta.2 (overlays, loader, mid-scanline catchup, scheduler tweaks).
-
-The scheduler runs the show after all the inits in `neon64.asm`. Profile bars show time on the RSP (top) and CPU (bottom) relative to a 60 FPS frame.
+The scheduler runs the show after all the inits in `loader.asm` and `neon64.asm`. Profile bars show time on the RSP (top) and CPU (bottom) relative to a 60 FPS frame.
 
 ### Scheduling
 
@@ -22,7 +18,7 @@ When it runs a task, the scheduler sets two variables: `target_cycle` is the emu
 
 `cycle_balance` can go positive if the task runs past the target cycle, when not dealing with global shared state. (Unfortunately the 6502 doesn't get to do this often, it is always on the lookout for interrupts. A better design would schedule these separately.)
 
-There are currently 5 tasks: CPU (6502), PPU, APU frame, APU DMC, and interrupt callback (`intcb`). `intcb` is for interrupt handlers that are not suitable to run in an exception, mostly they are for continuations of an asynchronous process, like the several steps of writing and verifying save data. If this task has any work, an interrupt handler will scheduler it to run at cycle 0, so it has priority after the next yield.
+There are currently 5 tasks: CPU (6502), PPU, APU frame, APU DMC, and interrupt callback (`intcb`).
 
 The RSP has a simple round-robin cooperative scheduler in ucode, the tasks do some chunk of work and yield, possibly running a completion vector in a `break` interrupt on the CPU. Tasks can indicate if they have no work; the RSP will not resume automatically if all tasks are idle. There is a priority signal from the CPU to run a specific task next, used for the APU flush, but I don't know if this does much good. PPU and APU each have an RSP task, I'd like to add a task that generates the dlist and manages the RDP, as well.
 
@@ -46,7 +42,7 @@ The CPU-side PPU task is `FrameLoop` in `ppu.asm`, broadly: Fetch sprites, fetch
 
 Profiling in an earlier version showed that the hottest loop was checking all 64 sprites on each of 240 lines, so instead sprite evaluation scans OAM once per frame. Each line has a list of up to 8 sprites that occur on that line. Tile fetches are done before the background fetches for each line.
 
-The background fetch is a Duff's device-ish loop, each iteration deals with all tiles using the same attribute byte. Flow enters the loop depending on the alignment of the X scroll, and exits when 33 tiles have been fetched. This has the potential to be extended to support mid-line changes, I have an implementation that works with Marble Madness but it's too buggy to release yet.
+The background fetch is a Duff's device-ish loop, each iteration deals with all tiles using the same attribute byte, flow enters the loop depending on the alignment of the X scroll. The PPU sets up the loop variables and installs a hook, then the PPU yields. If the 6502 makes a write to PPU registers, it uses the hook to catch up the PPU first; this allows for mid-scanline changes. (Currently this reinitializes everything when catching up, on every register write during non-vblank scanlines. It should be possible to reduce this time substantially, I suspect it is particularly bad for writes to 2007 when rendering is disabled.)
 
 The CPU fetches the pattern and attribute bytes, then passes these off to the RSP. The bytes collect in 64-bit shift registers, written out uncached when full; the VR4300's write buffer can help absorb the latency of a few big uncached writes, without wasting DCache on something the CPU never reads again. When the CPU has finished 8 lines, it writes out some additional data and then updates a write cursor in RSP DMEM, letting the ucode know it can DMA in the block. This isn't a fully functional FIFO; the CPU won't start writing again until the ucode has finished the frame. The structure of this "conv" buffer is in `mem.asm`.
 
@@ -58,7 +54,7 @@ The PPU ucode relies heavily on RSP vector ops: Multiply and accumulate to "shif
 
 When the RSP has DMAd the textures out to RDRAM, it issues a `break`, which interrupts the CPU and schedules a frame task. The frame task waits for a free framebuffer, waits for the RDP to finish, and executes the dlist. Ideally this would instead be run by the RSP, using the XBUS so a dlist needs never touch RDRAM. The frame task does things like controller polling and profile reporting, as well, which don't fit nicely elsewhere.
 
-When the dlist ends with a Full Sync, the RDP interrupt stores the framebuffer pointer for use at the next VI interrupt.
+The RDP interrupt handles round-robin scheduling of three dlists, the main PPU frame output, text rendering, and profile bars, currently. When the main frame dlist ends with a Full Sync, the RDP interrupt stores the framebuffer pointer for use at the next VI interrupt.
 
 The PPU has mappings for each 1k page in the PPU address space. CHR ROM access uses a write-protected TLB page to avoid checking for permission at write time, the exception handler attempts to skip the offending instruction.
 
@@ -108,11 +104,17 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 
 - `exception.asm`: VR4300 COP0 exception inits and vector. The exception vector acknowledges interrupts and passes control off to the various handlers. It handles one exception (TLB modifiction, for write protect) and displays an error for the rest. Includes support for debugging hangs (via the timer interrupt) and memory access (via the watch exception).
 
+- `overlay.asm`: A simple overlay system. Several chunks of code and bss are assembled for the same RAM region, fit to the largest. This writes out temporary `OVL_*.bin` files, later included back into the main binary, and includes an index to load them from ROM. Currently used for mappers, including a modified PPU task for MMC2, MMC3, and MMC4, mostly to avoid checking for mapper hooks in the PPU task, but it also saves cache.
+
+- `loader.asm`: Initial load, and allows for switching between different builds through resident vectors. Used for rebooting into PAL mode, since timing affects too much to handle easily with overlays.
+
+- `loader_mem.inc`: RAM and ROM layout for the loader.
+
 ### Scheduling
 
 - `scheduler.asm`: Cooperative scheduler for the CPU, using emulated cycle counts to sequence tasks.
 - `ucode_scheduler.asm`: Cooperative round robin scheduler for the RSP.
-- `intcb.asm`: The interrupt callback task, multiplexes the frame task with SI and PI callbacks, to avoid wasting scheduler time on many top-level tasks. This task doesn't schedule normally, it has its own flag (`intcb_needed`).
+- `intcb.asm`: The interrupt callback task, multiplexes the frame task with SI and PI callbacks, to avoid wasting scheduler time on many top-level tasks. This task doesn't schedule normally, it has its own flag (`intcb_needed`) that causes it to run after the next yield.
 - `frame.asm`: Frame task, the glue holding together the refresh loop. Controller polling, VI and RDP wait, RDP execution, menu rendering, profiling.
 
 ### Hardware interfacing
@@ -124,9 +126,10 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 - `dlist.asm`: Static RDP display lists for NES rendering and profile bars, to keep it simple there is one for each framebuffer
 - `ai.asm`: Audio init and scheduling.
 - `pi.asm`: Cartridge bus DMA, used for NES ROM load and save to SRAM, sync or async
+- `pi_basics`: Sync read, for use by `loader.asm`
 - `rsp.asm`: RSP init, runs completion vectors on interrupt and restarts (unless idle), restarts on incoming request if idle.
 - `si.asm`: Controller access, async
-- `vi.asm`: Video init and scheduling, simple double buffer, RDP interrupt handler, simple text blitting
+- `vi.asm`: Video init and scheduling, simple double frame buffer, RDP interrupt handler scheduling several dlists, text blitting with CPU and RDP
 
 ### Emulation
 
@@ -140,26 +143,28 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 
 #### PPU
 
-- `ppu.asm`: PPU task, which builds conv buffers to send to the ucode. Register read/write handlers.
+- `ppu.asm`: Shell for PPU task overlays, init, register read/write handlers.
+- `ppu_task.asm`: PPU task, which builds conv buffers to send to the ucode.
 - `ppu_tables.asm`: RGB palette LUT, bit reversal for horizontal sprite flip
 - `ucode_ppu.asm`: PPU ucode task, tile conversion and sprite blitting
 - `ucode_tables.asm`: Mostly constants to be loaded into VU registers for tile conversion. Also APU sequencer and mixer tables.
 
 #### APU
 
-- `apu.asm`: APU frame task, which runs on the frame counter (1/4 frame) clock, and APU DMC task, which runs at 1/8th the DMC rate. Register read/write handlers. These all write alists as needed.
+- `apu.asm`: APU frame task, which runs on the frame counter (1/4 frame) clock, and APU DMC task, which runs at 1/8th the DMC rate. Register handlers. These all write alists as needed.
 - `ucode_apu.asm`: APU ucode task, audio synthesis
 
 #### Cartridge
 
-- `rom.asm`: NES ROM loading, sets defaults for mapper 0 and provides routines for building mappers.
-- `mappers/*`: A file for each supported class of cart hardware. CPU and PPU memory map init (TLB and hooks), register handlers.
+- `rom.asm`: NES ROM loading, sets defaults for mapper 0, provides routines for building mappers, shell for mapper overlays.
+- `mappers/*`: A file for each supported iNES mapper, these are overlays managed by `rom.asm`. CPU and PPU memory map init (TLB and hooks), register handlers.
 
 ### Etc
 
 - `lib/debug_print.asm`: String copies and integer formatting. Supports outputting to an IS Viewer debug port, I've used this with cen64's `-is-viewer` option.
 - `profile_bars.asm`: This unconscionable code sets the corners of rectangles in the profile bar dlist.
-- `menu.asm`: A simple menu UI, written directly to the framebuffer.
+- `menu.asm`: A simple textual menu UI, drawn with the RDP.
 - `save.asm`: SRAM save and associated UI (error and success messages)
 - `N64_BOOTCODE.BIN`: Required (with a 6102 CIC) to pass the IPL checksum, loads the first 1MB into RDRAM at boot.
 - `font.bin`: 8x8 1bpp font
+- `rdpfont.bin`: 8x8 1bpp font, interleaved for use as 4bpp on the RDP with palettes that select each bitplane
