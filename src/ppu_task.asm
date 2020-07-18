@@ -592,6 +592,7 @@ bg_render_enabled:
   sb t0, ppu_status (r0)
 
   ppu_mul(t1, t2)
+  daddi cycle_balance, -bg_prefetch_tiles * tile_pixels * ppu_div
   dsub cycle_balance, t1
 sp0_set_done:
 

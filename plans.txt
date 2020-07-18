@@ -75,4 +75,5 @@ Known bugs:
 - Half of Qix playfield is corrupt
 - Nobunaga's Ambition title screen and in-game are messed up (needs an MMC1 board variant)
 - Bashi Bazook (proto) locks up on load, needs NES 2.0?
-- Monster Party - flickering line above status bar
+- Recca - Status bar bounces
+- Battletoads intro planet flashes in top of screen, status bar flicker
