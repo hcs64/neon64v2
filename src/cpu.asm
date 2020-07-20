@@ -1588,7 +1588,7 @@ if {defined LOG_CPU} || {defined LOG_IRQ} {
 
   daddiu cycle_balance, cpu_div * 7
 
-  take_interrupt(0xfffa, 0, 0)
+  take_interrupt(0xfffa, 1, 0)
 
 
 // cpu_t0 = opcode
