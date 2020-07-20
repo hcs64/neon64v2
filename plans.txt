@@ -13,6 +13,8 @@ Architecture ideas:
   make some mid-frame effects easier.
 - If I want expansion audio, the RSP scheduler needs to swap ucode, and/or
   I have to optimize for space.
+- The RSP ought to handle translating the palette to RGB, and it can do
+  deemphasis and greyscale at the same time.
 
 Missing features needed for better accuracy:
 - Mid-frame palette changes
@@ -20,7 +22,7 @@ Missing features needed for better accuracy:
 - BG-accurate SP0 hit
 - Bug-accurate Sprite overflow
 - Read of PPU activity
-- Audio IRQs (frame counter)
+- Frame counter IRQ
 - Palette deemphasis, greyscale
 - Proper screen size for PAL
 - Video signal parameters (slightly too narrow? starts too late?)
@@ -63,17 +65,31 @@ Easy
 
 Known bugs:
 - Profiling is wonky in PAL mode
-- Bill & Ted palette messes up when dialog boxes come up. - Needs mid-frame palette change (also Wizards & Warriors)
-- Rad Racer - single lines out of place (probably mid-line fine X), game over map is corrupt (different MMC1 board?)
-- Jurassic Park - Ocean logo on the title screen has a few lines out of place, probably mid-line fine X
-- Pop when shooting sword in Zelda is irritatingly loud
-- Some audio glitching in Mega Man 2 intro (check hw?)
-- A line is out of place on the Mike Tyson's Punch Out title screen
-- Aladdin bad opcode on startup
-- Pirates! bad opcode on startup
-- Half of Qix playfield is corrupt
-- Nobunaga's Ambition title screen and in-game are messed up (needs an MMC1 board variant)
-- Bashi Bazook (proto) locks up on load, needs NES 2.0?
-- Recca - Status bar bounces
-- Battletoads intro planet flashes in top of screen, status bar flicker
-- DPCM Letterbox Demo bounces
+- Mike Tyson's Punch Out - A line is out of place on the first screen (MMC2 logic?)
+
+* Audio
+  - Pop when shooting sword in Zelda is irritatingly loud
+  - Some audio glitching in Mega Man 2 intro (check hw?)
+
+* Crashes
+  - Aladdin bad opcode on startup
+  - Pirates! bad opcode on startup
+  - Bashi Bazook (proto) locks up on load, needs NES 2.0?
+  - Dragon Warrior IV locks up on load
+  - Streemerz needs unofficial opcodes
+
+* Mid-frame palette change
+  - Bill & Ted - dialog boxes
+  - Wizards & Warriors - status bar
+
+* Timing
+  - Rad Racer - single lines out of place (mid-line fine X? timing?), game over map is corrupt (different MMC1 board?)
+  - Jurassic Park - Ocean logo on the title screen has a few lines out of place, (mid-line fine X? timing?)
+  - Recca - Status bar bounces
+  - Battletoads intro planet flashes in top of screen, status bar flicker
+  - DPCM Letterbox Demo text bounces
+  - Bucky O' Hare - Flickering line in status bar
+
+* MMC1
+  - Half of Qix playfield is corrupt (MMC1 board variant?)
+  - Nobunaga's Ambition title screen and in-game are messed up (MMC1 board variant)

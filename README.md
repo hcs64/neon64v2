@@ -1,5 +1,9 @@
 # Neon64 2.0 source notes
 
+## Running
+
+To run Neon64, check the [home page](https://hcs64.com/neon64.html) or [GitHub](https://github.com/hcs64/neon64v2/releases) for releases, which include a readme.
+
 ## Building
 
 This project uses [ARM9's fork of the bass assembler](https://github.com/ARM9/bass), which is linked as a git submodule for easy setup. On a system with git, Make, and a C compiler, you can build Neon64 by running:
