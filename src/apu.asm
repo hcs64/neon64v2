@@ -36,6 +36,7 @@ apu_frame_mode:; db 0
 apu_enable:; db 0
 apu_irqs:; db 0
 apu_dmc_load:; db 0
+apu_dmc_sample_buffer_full:; db 0
 
 constant apu_dmc_buffer_size(10)
 apu_dmc_buffer:; fill apu_dmc_buffer_size
@@ -53,6 +54,9 @@ end_bss()
 scope APU {
 
 Init:
+  addi sp, 8
+  sw ra, -8(sp)
+
 // TODO memset
   ls_gp(sd r0, apu_timer)
   ls_gp(sw r0, apu_len)
@@ -73,6 +77,7 @@ Init:
   ls_gp(sb r0, apu_enable)
   ls_gp(sb r0, apu_irqs)
   ls_gp(sb r0, apu_dmc_load)
+  ls_gp(sb r0, apu_dmc_sample_buffer_full)
   ls_gp(sb r0, apu_dmc_buffer_count)
 if {defined LOG_DMC} {
   ls_gp(sb r0, apu_dmc_sim_level)
@@ -82,13 +87,10 @@ if {defined LOG_DMC} {
   ls_gp(lhu t0, noise_period_table + 0)
   ls_gp(sh t0, apu_timer + 2*apu_noise)
 
-// Just in case DMC gets enabled before the timer is set.
   ls_gp(lhu t0, dmc_rate_table + 0)
+  ls_gp(lhu a0, dmc_cycle_table + 0)
   ls_gp(sh t0, apu_dmc_timer)
-  lli t1, 8*cpu_div
-  mult t0, t1
-  mflo t2
-  ls_gp(sw t2, apu_dmc_timer_cycles)
+  ls_gp(sw a0, apu_dmc_timer_cycles)
 
 // When the pending alist took effect
   ls_gp(sd r0, apu_alist_cycle)
@@ -101,9 +103,16 @@ if {defined LOG_DMC} {
   bnez t1,-
   addi t0, 1
 
-// Tail call
-  j APU.ResetFrameCounter
+  la_gp(a1, DMCTask)
+  jal Scheduler.ScheduleTaskFromNow
+  lli a2, apu_dmc_task
+
+  jal APU.ResetFrameCounter
   nop
+
+  lw ra, -8(sp)
+  jr ra
+  addi sp, -8
 
 WriteFrameCounter:
 // cpu_t0: Write to 0x4017
@@ -196,21 +205,12 @@ evaluate rep_i({rep_i}+1)
 
   jal DMCSampleStart
   nop
+
 +
 
-// Start DMC task if not already running
-  ld t1, task_times + apu_dmc_task*8 (r0)
-  bgez t1,+
-  nop
-
+// Try filling the buffer now that length > 0
   jal DMCRead
   nop
-
-  ls_gp(lwu a0, apu_dmc_timer_cycles)
-  la_gp(a1, DMCTask)
-  jal Scheduler.ScheduleTaskFromNow
-  lli a2, apu_dmc_task
-+
 
 end:
   lw ra, cpu_rw_handler_ra (r0)
@@ -454,26 +454,45 @@ WriteDMCFlags:
   sb t1, irq_pending (r0)
 +
 
+  ls_gp(lhu t2, apu_dmc_timer)
   andi t0, cpu_t0, 0b1111
   sll t0, 1
-  add t0, gp
-  lhu t0, dmc_rate_table - gp_base (t0)
+  add t1, t0, gp
+  lhu t1, dmc_rate_table - gp_base (t1)
 
-  lli t1, 8*cpu_div
-  mult t0, t1
-  mflo t2
-  ls_gp(sh t0, apu_dmc_timer)
-
+  beq t2, t1,+
   ls_gp(sb cpu_t0, apu_dmc_regs + 0)
 
-  ls_gp(lwu t0, apu_dmc_timer_cycles)
-// Adjust schedule to reflect rate change
-  ld t1, task_times + apu_dmc_task * 8 (r0)
-  ls_gp(sw t2, apu_dmc_timer_cycles)
-  bltz t1,+
-  sub t2, t0
-  dadd t1, t2
-  //sd t1, task_times + apu_dmc_task * 8 (r0)
+  ls_gp(sh t1, apu_dmc_timer)
+  add t0, gp
+  lhu t0, dmc_cycle_table - gp_base (t0)
+  ls_gp(lwu t2, apu_dmc_timer_cycles)
+  ls_gp(sw t0, apu_dmc_timer_cycles)
+
+// Reschedule the upcoming DMC task
+// I think this is faster than having 8x runs of the task to
+// keep track of the shift register.
+
+// Calculate cycles until next task run
+  ld t3, target_cycle (r0)
+  ld t4, task_times + apu_dmc_task * 8 (r0)
+  dadd t3, cycle_balance
+  dsub t4, t3
+
+// Calculate samples left with old timer
+  srl t2, 3
+  div t4, t2
+  mflo t1 // whole samples
+  mfhi t4 // cycles left in current sample
+  nop // 2 instr hazard from mfhi to mult
+
+// Scale future samples to new rate
+  srl t0, 3
+  mult t1, t0
+  mflo t2
+  add t2, t4
+  dadd t2, t3
+  sd t2, task_times + apu_dmc_task * 8 (r0)
 +
   jr ra
   nop
@@ -520,7 +539,11 @@ scope DMCRead: {
 
 // TODO spend cycles on the CPU task
 
+  ls_gp(lhu t1, apu_dmc_length_left)
+  ls_gp(lbu t2, apu_dmc_sample_buffer_full)
+  beqz t1, end
   ls_gp(lbu t0, apu_dmc_buffer_count)
+  bnez t2, end
   lli t1, apu_dmc_buffer_size
   bne t0, t1,+
   nop
@@ -538,7 +561,6 @@ scope DMCRead: {
   srl t2, t0, 8
   sll t2, 2
   lw t2, cpu_read_map (t2)
-  beqz t1, end
   addi t1, -1
   bnez t1,++
   ls_gp(sh t1, apu_dmc_length_left)
@@ -647,6 +669,10 @@ if 1 == 0 {
   addi sp, -8
 }
 
+// For timing, we have a buffer full
+  lli t0, 1
+  ls_gp(sb t0, apu_dmc_sample_buffer_full)
+
 end:
   lw ra, -8 (sp)
   jr ra
@@ -671,15 +697,11 @@ DMCSampleStart:
 
 DMCTaskLoop:
   ls_gp(lwu t0, apu_dmc_timer_cycles)
+  jal Scheduler.Yield
   dadd cycle_balance, t0
-  bgezal cycle_balance, Scheduler.Yield
-  nop
 
 DMCTask:
-  ls_gp(lhu t0, apu_dmc_length_left)
-  beqz t0, Scheduler.FinishTask
-  nop
-
+  ls_gp(sb r0, apu_dmc_sample_buffer_full)
   j DMCRead
   la_gp(ra, DMCTaskLoop)
 

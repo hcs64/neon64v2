@@ -126,7 +126,7 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 - `dlist.asm`: Static RDP display lists for NES rendering and profile bars, to keep it simple there is one for each framebuffer
 - `ai.asm`: Audio init and scheduling.
 - `pi.asm`: Cartridge bus DMA, used for NES ROM load and save to SRAM, sync or async
-- `pi_basics`: Sync read, for use by `loader.asm`
+- `pi_basics.asm`: Sync read, for use by `loader.asm`
 - `rsp.asm`: RSP init, runs completion vectors on interrupt and restarts (unless idle), restarts on incoming request if idle.
 - `si.asm`: Controller access, async
 - `vi.asm`: Video init and scheduling, simple double frame buffer, RDP interrupt handler scheduling several dlists, text blitting with CPU and RDP
