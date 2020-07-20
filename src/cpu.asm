@@ -87,7 +87,7 @@ macro get_flags(out_reg, tmp1, tmp2) {
 }
 
 FinishCycleAndFetchOpcode:
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
 TestNextCycleAndFetchOpcode:
   bgezal cycle_balance, Scheduler.YieldFromCPU
   nop // use this delay slot?
@@ -114,9 +114,9 @@ if {defined LOG_CPU} {
   nop
 }
 
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
 
 // Cycle 2: Begin executing opcode
   bgezal cycle_balance, Scheduler.YieldFromCPU
@@ -130,18 +130,18 @@ include "opcodes.asm"
 macro addr_fetch_imm(evaluate fetch_reg) {
   lbu {fetch_reg}, 0 (cpu_mpc)
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 }
 
 macro addr_fetch_lh_imm(evaluate low_reg, evaluate high_reg) {
   lbu {low_reg}, 0 (cpu_mpc)
   lbu {high_reg}, 1 (cpu_mpc)
 
-  daddiu cycle_balance, cpu_div * 2
+  daddi cycle_balance, cpu_div * 2
   bgezal cycle_balance, Scheduler.YieldFromCPU
-  addiu cpu_mpc, 2
+  addi cpu_mpc, 2
 }
 
 macro addr_fetch_ix(evaluate low_reg, evaluate high_reg) {
@@ -153,7 +153,7 @@ macro addr_fetch_ix(evaluate low_reg, evaluate high_reg) {
   addi {high_reg}, 1
   andi {high_reg}, 0xff
 
-  daddiu cycle_balance, cpu_div * 4
+  daddi cycle_balance, cpu_div * 4
   bgezal cycle_balance, Scheduler.YieldFromCPU
   lbu {high_reg}, nes_ram ({high_reg})
 }
@@ -189,7 +189,7 @@ addr_r_imm:
 // Cycle 2: Fetch value, increment PC
   lbu cpu_t1, 0 (cpu_mpc)
   jr cpu_t0
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 
 addr_r_zp:
 // Cycle 2: Fetch address, increment PC
@@ -204,7 +204,7 @@ macro addr_r_zxy(evaluate reg) {
   addr_fetch_imm(cpu_t1)
 
 // Cycle 3: Read from unindexed address (no effect), add X/Y
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   addu cpu_t1, {reg}
 
@@ -266,9 +266,9 @@ macro addr_r_absxy(reg) {
 +
 
 // Fix address, retry
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
-  addiu cpu_t1, 0x100
+  addi cpu_t1, 0x100
   andi cpu_t1, 0xffff
   andi t3, cpu_t1, 0xff00
   j -
@@ -296,7 +296,7 @@ scope addr_r_iy: {
   addr_fetch_imm(cpu_t1)
 
 // Cycle 3: Fetch effective address low (ZP)
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   lbu cpu_t2, nes_ram (cpu_t1)
 
@@ -305,7 +305,7 @@ scope addr_r_iy: {
   andi cpu_t1, 0xff
   lbu cpu_t1, nes_ram (cpu_t1)
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   add cpu_t2, cpu_y
 
@@ -321,7 +321,7 @@ retry:
   lw t0, cpu_read_map (t2)
 
   bgez t0,+
-  addu t1, t0, cpu_t1
+  add t1, t0, cpu_t1
 
   jr t0
   move ra, cpu_t0
@@ -341,9 +341,10 @@ cycle5a:
 +
 
 // Fix address, retry
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
-  addiu cpu_t1, 0x100
+  addi cpu_t1, 0x100
+  andi cpu_t1, 0xffff
   andi t2, cpu_t1, 0xff00
   j retry
   srl t2, 8-2
@@ -362,7 +363,7 @@ cycle5a:
 addr_rw_zp:
 // Cycle 2: Fetch address, increment PC
   lbu cpu_t1, 0 (cpu_mpc)
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 
 // Cycle 3: Read from effective address
 // Cycle 4: Write back old value (no effect on ZP), execute
@@ -370,14 +371,14 @@ addr_rw_zp:
   lbu a0, nes_ram (cpu_t1)
 
 // Cycle 5: Write
-  daddiu cycle_balance, cpu_div * 4
+  daddi cycle_balance, cpu_div * 4
   j TestNextCycleAndFetchOpcode
   sb a0, nes_ram (cpu_t1)
 
 addr_rw_zx:
 // Cycle 2: Fetch address, increment PC
   lbu cpu_t1, 0 (cpu_mpc)
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 // Cycle 3: Read from unincremented address (no effect on ZP), add X
   addu cpu_t1, cpu_x
   andi cpu_t1, 0xff
@@ -386,7 +387,7 @@ addr_rw_zx:
   jalr cpu_t0
   lbu a0, nes_ram (cpu_t1)
 // Cycle 6: Write new value to effective address
-  daddiu cycle_balance, cpu_div * 5
+  daddi cycle_balance, cpu_div * 5
   j TestNextCycleAndFetchOpcode
   sb a0, nes_ram (cpu_t1)
 
@@ -413,7 +414,7 @@ pod_read:
   lbu cpu_t1, 0 (t0)
 
 write_back:
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   nop
 
@@ -450,7 +451,7 @@ write_back:
   jalr cpu_t2
   move a0, cpu_t0
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   move cpu_t0, a0
 
@@ -476,7 +477,7 @@ pod:
   jalr cpu_t2
   move cpu_t1, t1
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   move cpu_t0, a0
 
@@ -499,7 +500,7 @@ scope addr_rw_absx: {
 
   beq t0, t1, no_fixup
   move cpu_t1, cpu_t2
-  addiu cpu_t2, 0x100
+  addi cpu_t2, 0x100
   andi cpu_t2, 0xffff
 no_fixup:
 
@@ -511,7 +512,7 @@ no_fixup:
 +
 // No need to actually do wrong read for POD (it's the reed!)
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   nop
 
@@ -585,17 +586,17 @@ macro write_abs_carry_and_finish(evaluate data, evaluate lo_addr, evaluate hi_ad
 addr_w_zp:
 // Cycle 2: Fetch address, increment PC
   lbu cpu_t1, 0 (cpu_mpc)
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 
 // Cycle 3: Write
-  daddiu cycle_balance, cpu_div * 2
+  daddi cycle_balance, cpu_div * 2
   j TestNextCycleAndFetchOpcode
   sb cpu_t0, nes_ram (cpu_t1)
  
 macro addr_w_zxy(evaluate reg) {
 // Cycle 2: Fetch address, increment PC
   lbu cpu_t1, 0 (cpu_mpc)
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 
 // Cycle 3: Read from unindexed address (no effect), add X/Y
   addu cpu_t1, {reg}
@@ -603,7 +604,7 @@ macro addr_w_zxy(evaluate reg) {
 
 // Cycle 4: Write
 
-  daddiu cycle_balance, cpu_div * 3
+  daddi cycle_balance, cpu_div * 3
   j TestNextCycleAndFetchOpcode
   sb cpu_t0, nes_ram (cpu_t1)
 }
@@ -627,7 +628,7 @@ macro addr_w_absxy(evaluate reg) {
   addr_fetch_lh_imm(cpu_t1, cpu_t2)
 
 // Cycle 4: Read from wrong effective address (TODO?)
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   add cpu_t1, {reg}
 
@@ -656,7 +657,7 @@ addr_w_iy:
   addr_fetch_imm(cpu_t2)
 
 // Cycle 3: Fetch effective address low (ZP)
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   lbu cpu_t1, nes_ram (cpu_t2)
 
@@ -665,14 +666,14 @@ addr_w_iy:
   andi cpu_t2, 0xff
   lbu cpu_t2, nes_ram (cpu_t2)
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   add cpu_t1, cpu_y
 
 // Cycle 5: Read from wrong effective address
   // TODO
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   nop
 
@@ -933,12 +934,12 @@ ex_php:
 // cpu_t0: cpu_stack
 // Cycle 2: Read next instruction (WONTFIX)
 // Cycle 3: Push P, decrement S
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
 
   get_flags(a0, t0, t1)
   ori a0, flagB
   sb a0, nes_ram + 0x100 (cpu_t0)
-  addiu cpu_t0, -1
+  addi cpu_t0, -1
   andi cpu_t0, 0xff
 
   j FinishCycleAndFetchOpcode
@@ -972,10 +973,10 @@ ex_plp:
 
 // Cycle 2: Read next instruction (WONTFIX)
 // Cycle 3: Increment S
-  addiu cpu_t0, 1
+  addi cpu_t0, 1
   andi cpu_t0, 0xff
 
-  daddiu cycle_balance, cpu_div * 2
+  daddi cycle_balance, cpu_div * 2
 // Cycle 4: Pull P
 
   pull_flags()
@@ -987,10 +988,10 @@ ex_pha:
 
 // Cycle 2: Read next instruction (WONTFIX)
 // Cycle 3: Push A, decrement S
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
 
   sb cpu_acc, nes_ram + 0x100 (cpu_t0)
-  addiu cpu_t0, -1
+  addi cpu_t0, -1
   andi cpu_t0, 0xff
 
   j FinishCycleAndFetchOpcode
@@ -1002,9 +1003,9 @@ ex_pla:
 // Cycle 2: Read next instruction (WONTFIX)
 // Cycle 3: Increment S
 // Cycle 4: Pull A
-  daddiu cycle_balance, cpu_div * 2
+  daddi cycle_balance, cpu_div * 2
 
-  addiu cpu_t0, 1
+  addi cpu_t0, 1
   andi cpu_t0, 0xff
 
   lbu cpu_acc, nes_ram + 0x100 (cpu_t0)
@@ -1019,17 +1020,17 @@ ex_rti:
 
 // Cycle 2: Read next instruction (WONTFIX)
 // Cycle 3: Increment S
-  addiu cpu_t0, 1
+  addi cpu_t0, 1
   andi cpu_t0, 0xff
 
 // Cycle 4: Pull flags, increment S
   pull_flags()
-  addiu cpu_t0, 1
+  addi cpu_t0, 1
   andi cpu_t0, 0xff
 
 // Cycle 5: Pull low PC, increment S
   lbu cpu_t1, nes_ram + 0x100 (cpu_t0)
-  addiu cpu_t0, 1
+  addi cpu_t0, 1
   andi cpu_t0, 0xff
 
 // Cycle 6: Pull high PC
@@ -1045,18 +1046,18 @@ ex_rti:
   addu cpu_mpc, cpu_t1
 
   j TestNextCycleAndFetchOpcode
-  daddiu cycle_balance, cpu_div * 5
+  daddi cycle_balance, cpu_div * 5
 
 ex_rts:
 // cpu_t0: cpu_stack
 
 // Cycle 2: Read next instruction (WONTFIX)
 // Cycle 3: Increment S
-  addiu cpu_t0, 1
+  addi cpu_t0, 1
   andi cpu_t0, 0xff
 // Cycle 4: Pull low PC, increment S
   lbu cpu_t1, nes_ram + 0x100 (cpu_t0)
-  addiu cpu_t0, 1
+  addi cpu_t0, 1
   andi cpu_t0, 0xff
 // Cycle 5: Pull high PC
   lbu cpu_t2, nes_ram + 0x100 (cpu_t0)
@@ -1070,7 +1071,7 @@ ex_rts:
   srl t0, cpu_t2, 8
   sll t0, 2
   lw cpu_mpc, cpu_read_map (t0)
-  daddiu cycle_balance, cpu_div * 4
+  daddi cycle_balance, cpu_div * 4
   sw cpu_mpc, cpu_mpc_base (r0)
 
   j FinishCycleAndFetchOpcode
@@ -1080,14 +1081,14 @@ ex_jsr:
 // cpu_t0: low byte of address
 
 // Cycle 2: Fetch low address byte, increment PC
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 
 // Cycle 3: ??
 // I'll take this an opportunity to recover the PC from cpu_mpc
   lw t0, cpu_mpc_base (r0)
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   subu cpu_t1, cpu_mpc, t0
 
@@ -1097,7 +1098,7 @@ ex_jsr:
   sb t0, nes_ram + 0x100 (cpu_t2)
   addi cpu_t2, -1
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   andi cpu_t2, 0xff
 
@@ -1105,7 +1106,7 @@ ex_jsr:
   sb cpu_t1, nes_ram + 0x100 (cpu_t2)
   addi cpu_t2, -1
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
   sb cpu_t2, cpu_stack (r0)
 
@@ -1147,9 +1148,9 @@ ex_jmp_abs:
 // cpu_t0: low address byte
 // Cycle 2, fetch low address byte, increment PC
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 
 // Cycle 3, fetch high address byte, set PC
 // use load delay slot?
@@ -1160,17 +1161,17 @@ ex_jmp_absi:
 // cpu_t0: low address byte
 // Cycle 2, fetch low address, increment PC
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
   bgezal cycle_balance, Scheduler.YieldFromCPU
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
 
 // Cycle 3, fetch high address byte
   lbu cpu_t1, 0(cpu_mpc)
 
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
 
 // Cycle 4, fetch low address
-  daddiu cycle_balance, cpu_div
+  daddi cycle_balance, cpu_div
 // Cycle 5, fetch high address
 // Not supporting I/O here
   sll cpu_t1, 2
@@ -1180,7 +1181,7 @@ ex_jmp_absi:
   addu t0, cpu_t2
 
 // No need to re-map as jmp indirect doesn't cross pages
-  addiu cpu_t0, 1
+  addi cpu_t0, 1
   andi cpu_t0, 0xff
   or t1, cpu_t0, cpu_t1
   addu t1, cpu_t2
@@ -1193,7 +1194,7 @@ ex_bmi:
 // cpu_t0: cpu_n_byte, signed
 // Delay slot?
   bgez cpu_t0, FinishCycleAndFetchOpcode
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1201,7 +1202,7 @@ ex_bpl:
 // cpu_t0: cpu_n_byte, signed
 // Delay slot?
   bltz cpu_t0, FinishCycleAndFetchOpcode
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1209,7 +1210,7 @@ ex_bcs:
 // cpu_t0: cpu_c_byte
 // Delay slot?
   beqz cpu_t0, FinishCycleAndFetchOpcode
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1217,7 +1218,7 @@ ex_beq:
 // cpu_t0: cpu_z_byte
 // Delay slot?
   bnez cpu_t0, FinishCycleAndFetchOpcode
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1225,7 +1226,7 @@ ex_bcc:
 // cpu_t0: cpu_c_byte
 // Delay slot?
   bnez cpu_t0, FinishCycleAndFetchOpcode
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1233,7 +1234,7 @@ ex_bne:
 // cpu_t0: cpu_z_byte
 // Delay slot?
   beqz cpu_t0, FinishCycleAndFetchOpcode
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1241,7 +1242,7 @@ ex_bvs:
 // cpu_t0: cpu_flags
   andi cpu_t0, flagV
   beqz cpu_t0, FinishCycleAndFetchOpcode
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1249,7 +1250,7 @@ ex_bvc:
 // cpu_t0: cpu_flags
   andi cpu_t0, flagV
   bnez cpu_t0, FinishCycleAndFetchOpcode
-  addiu cpu_mpc, 1
+  addi cpu_mpc, 1
   j ex_taken_branch
   lb cpu_t0, -1 (cpu_mpc)
 
@@ -1258,7 +1259,7 @@ ex_taken_branch:
 // Cycle 2: Fetch offset (already done), increment PC (already done)
 // Cycle 3: Fetch opcode of next instr (WONTFIX), add offset to low PC
   lw t0, cpu_mpc_base (r0)
-  daddiu cycle_balance, cpu_div * 2
+  daddi cycle_balance, cpu_div * 2
   bgezal cycle_balance, Scheduler.YieldFromCPU
   subu cpu_t1, cpu_mpc, t0
 
@@ -1342,7 +1343,7 @@ scope InitCPU: {
 
 // Map RAM (0-0x800, mirrored 0x800-0x2000)
   lli t0, 0
-  addiu t1, a0, 0x800
+  addi t1, a0, 0x800
   lli t2, 8
 
 -;sw t1, cpu_read_map (t0)
@@ -1403,7 +1404,7 @@ scope InitCPU: {
 // Map cart RAM (0x6000-0x8000)
   lli t0, 0x60 * 4
   lli t3, 0x20
-  addiu t1, a0, -0x6000
+  addi t1, a0, -0x6000
 
 -;sw t1, cpu_read_map (t0)
   sw t1, cpu_write_map (t0)
@@ -1535,8 +1536,8 @@ if {setB} == 1 {
 
 // TODO these shouldn't be with the cold data
 TakeBRK:
-  daddiu cycle_balance, cpu_div * 6
-  addiu cpu_mpc, 1
+  daddi cycle_balance, cpu_div * 6
+  addi cpu_mpc, 1
 
   take_interrupt(0xfffe, 1, 1)
 
@@ -1567,7 +1568,7 @@ if {defined LOG_CPU} || {defined LOG_IRQ} {
   nop
 }
   lbu cpu_t0, cpu_stack (r0)
-  daddiu cycle_balance, cpu_div * 7
+  daddi cycle_balance, cpu_div * 7
 
   take_interrupt(0xfffe, 1, 0)
 
@@ -1586,7 +1587,7 @@ if {defined LOG_CPU} || {defined LOG_IRQ} {
 // Technically NMI is edge-triggered, but this should work.
   sb r0, nmi_pending (r0)
 
-  daddiu cycle_balance, cpu_div * 7
+  daddi cycle_balance, cpu_div * 7
 
   take_interrupt(0xfffa, 1, 0)
 
@@ -1602,8 +1603,8 @@ handle_bad_opcode:
   lli a1, 2
 
   jal PrintCPUInfo
-  addiu cpu_mpc, -1
-  addiu cpu_mpc, 1
+  addi cpu_mpc, -1
+  addi cpu_mpc, 1
 
   j DisplayDebugAndHalt
   nop
