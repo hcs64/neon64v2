@@ -61,9 +61,9 @@ savestates are not yet supported.
 Architecture
 ------------
 
-I split up the 6502 CPU ops to reduce code size; all N64 CPU code fits in
-ICache. All ucode fits in IMEM together. Overlays keep only the active
-mapper in RAM, and provide modified PPU cores for MMC2, MMC3, and MMC4.
+I split up the 6502 CPU ops to reduce code size. All ucode fits in IMEM
+together. Overlays keep only the active mapper in RAM, and provide
+modified PPU cores for MMC2, MMC3, and MMC4.
 
 The CPU runs the main PPU loop. It passes the bytes read to the RSP, which
 converts the background to a 4bpp texture and arranges sprites in an 8bpp
@@ -127,8 +127,8 @@ Thanks to:
 Many thanks to contributors to the NesDev wiki and ultra64.ca.
 
 Greets to the #n64dev and N64brew sceners, LaC, Pinchy, Zoinkity, jrra,
-mikeryan, ppcasm, arbin, DragonMinded, level42, fraser, fin, CrashOverride,
-nico, anarko, et al!
+mikeryan, ppcasm, arbin, DragonMinded, level42, fraser, fin, CrashOveride,
+awygle, nico, anarko, et al!
 
 Hello to my HCS Forum friends, bxaimc, knurek, FastElbja, manakoAT, kode54,
 bnnm, Josh W, Mouser_X, and unknownfile if you're still out there!

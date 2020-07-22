@@ -260,7 +260,7 @@ end_bss()
 
 align_icache()
 
-print 0x8000'0000+32*0x400 - pc(), " bytes left in ICache\n"
+print 0x8000'0000+16*0x400 - pc(), " bytes left in ICache\n"
 
 include "ucode.asm"
 include "dlist.asm"
