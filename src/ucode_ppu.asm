@@ -3,7 +3,8 @@
 //define RSP_BUSY_LOOP()
 
 // Work around missing SFV instr in cen64
-// NOTE this doesn't currently fit in IMEM
+// NOTE this doesn't currently fit in IMEM, so it also
+// disables sprite rendering.
 //define SIMULATE_SFV()
 
 InitPPU:
@@ -296,6 +297,7 @@ shift_tile_loop_end:
 
 
 // ##### Sprites
+if !{defined SIMULATE_SFV} {
 // Convert to 8bpp
   lli a2, dmem_src+src_sp_pat
   lli a3, dmem_src+src_sp_atr
@@ -611,6 +613,7 @@ layer_sprite(t0, v16, v0, e8)
   mfc0 t0, C0_DMA_BUSY
   bnez t0,-
   nop
+} // if !{defined SIMULATE_SFV}
 
   addi a0, conv_src_size
 
