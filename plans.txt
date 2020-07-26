@@ -87,7 +87,6 @@ Known bugs:
   - Jurassic Park - Ocean logo on the title screen has a few lines out of place, (mid-line fine X? timing?)
   - Recca - Status bar bounces
   - Battletoads intro planet flashes in top of screen, status bar flicker
-  - DPCM Letterbox Demo text bounces
   - Bucky O' Hare - Flickering line in status bar
 
 * MMC1

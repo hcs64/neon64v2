@@ -123,6 +123,7 @@ Thanks to:
 * Visor for a lot of good patches to 1.2
 * Eisi for adding MMC4 support in 1.2
 * bootgod et al for NesCartDB
+* tepples for helpful tests (and the Sprite Demo!)
 
 Many thanks to contributors to the NesDev wiki and ultra64.ca.
 
@@ -144,6 +145,6 @@ Bug reports welcome!
 
 Git: https://github.com/hcs64/neon64v2
 Forum: https://hcs64.com/mboard/forum.php
-Email: agashlin@gmail.com 
+Email: agashlin@gmail.com
 
 -hcs 2020-07-??

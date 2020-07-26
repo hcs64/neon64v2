@@ -537,8 +537,6 @@ scope DMCRead: {
   addi sp, 8
   sw ra, -8 (sp)
 
-// TODO spend cycles on the CPU task
-
   ls_gp(lhu t1, apu_dmc_length_left)
   ls_gp(lbu t2, apu_dmc_sample_buffer_full)
   beqz t1, end
@@ -550,6 +548,16 @@ scope DMCRead: {
 
   jal Render
   nop
++
+
+// Spend 4 CPU cycles for the read
+  lbu t0, running_task (r0)
+  lli t1, cpu_inst_task
+  beql t0, t1,+
+  daddi cycle_balance, 4 * cpu_div
+  ld t0, task_times + cpu_inst_task * 8 (r0)
+  daddi t0, 4 * cpu_div
+  sd t0, task_times + cpu_inst_task * 8 (r0)
 +
 
   ls_gp(lhu t0, apu_dmc_cur_addr)
@@ -715,7 +723,7 @@ ReadStatus:
   ls_gp(lw t0, apu_len)
   lbu t2, irq_pending (r0)
   ls_gp(lhu t3, apu_dmc_length_left)
-  
+
 // Calculate lengths == 0
   andi t1, t0, 0xff
   slti cpu_t1, 1
