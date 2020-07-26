@@ -4,15 +4,24 @@ InitDebug:
   ls_gp(sw t0, debug_buffer_cursor)
 
 // Print decimal
-// a0: 32-bit unsigned value
-// TODO: support negative
+// a0: 32-bit signed value
 scope PrintDec: {
   constant val(a0)
   constant out(t0)
   constant tmp(t1)
 
+
+  bgez a0, non_negative
   ls_gp(lw out, debug_buffer_cursor)
 
+  lli tmp, '-'
+  sb tmp, 0(out)
+  addi out, 1
+  ls_gp(sw out, debug_buffer_cursor)
+
+  neg val
+
+non_negative:
   {
     constant ten(t2)
     lli ten, 10
