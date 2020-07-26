@@ -569,9 +569,10 @@ bg_render_enabled:
 // FIXME fake sp0, set if there are any solid pixels in sp0
   lbu t0, sp0_this_line (r0)
   beqz t0,+
-  nop
+  ld t3, ppu_sp0_cycle (r0)
 
   ls_gp(lbu t0, oam + 3) // sp0 X
+  bgez t3,+
   addi t0, 1  // delay of 1 pixel
   andi t3, t0, 0xff
   bne t3, t0,+  // no hit on X=255
