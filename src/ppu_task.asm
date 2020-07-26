@@ -596,10 +596,13 @@ bg_render_enabled:
   dsub cycle_balance, t1
 sp0_set_done:
 
-  daddi cycle_balance, (bg_fetch_tiles * tile_pixels) * ppu_div
+// TODO eol_early conflicts with sp0
+  daddi cycle_balance, (bg_fetch_tiles * tile_pixels - eol_early) * ppu_div
 
   bgezal cycle_balance, Scheduler.Yield
   nop
+
+  daddi cycle_balance, eol_early * ppu_div
 
 // If there is still fetch left when we resume, finish it.
   lw t0, ppu_catchup_cb (r0)

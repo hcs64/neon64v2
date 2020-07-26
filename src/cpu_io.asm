@@ -216,7 +216,7 @@ io_write_label(0x4013)
   la_gp(ra, APU.WriteDMCSampleLength)
 
 io_write_label(0x4014)
-  daddi cycle_balance, 513 * cpu_div
+  daddi cycle_balance, 512 * cpu_div
   jal PPU.OAMDMA
   la_gp(ra, io_write_done)
 
