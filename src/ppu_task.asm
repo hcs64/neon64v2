@@ -57,6 +57,8 @@ scope FrameLoop: {
   sb r0, nmi_pending (r0)
   andi t0, 0b0001'1111
   sb t0, ppu_status (r0)
+  daddi t0, r0, -1
+  sd t0, ppu_sp0_cycle (r0)
 
   bgezal cycle_balance, Scheduler.Yield
   nop
@@ -567,36 +569,22 @@ bg_render_enabled:
   dadd t1, cycle_balance
   ls_gp(sd t1, ppu_catchup_current_cycle)
 
-// Sprite 0 hit
-// FIXME fake sp0, assumes we hit on sp0 X if any pixel in sp0 is solid
+// FIXME fake sp0, set if there are any solid pixels in sp0
   lbu t0, sp0_this_line (r0)
-  beqz t0, sp0_set_done
+  beqz t0,+
   nop
 
-  lbu t0, ppu_status (r0)
-  ls_gp(lbu t1, oam + 3) // sprite 0 X
-  andi t0, 0b0100'0000
-  bnez t0, sp0_set_done
-  nop
+  ls_gp(lbu t0, oam + 3) // sp0 X
+  addi t0, 1  // delay of 1 pixel
+  andi t3, t0, 0xff
+  bne t3, t0,+  // no hit on X=255
+  ppu_mul(t0, t3)
+  dadd t2, t0, t1
+  daddi t2, bg_prefetch_pixels * ppu_div
+  sd t2, ppu_sp0_cycle (r0)
++
 
-  ppu_mul(t1, t2)
-  daddi cycle_balance, bg_prefetch_tiles * tile_pixels * ppu_div
-  dadd cycle_balance, t1
-
-  bgezal cycle_balance, Scheduler.Yield
-  nop
-
-  lbu t0, ppu_status (r0)
-  ls_gp(lbu t1, oam + 3) // sprite 0 X
-  ori t0, 0b0100'0000
-  sb t0, ppu_status (r0)
-
-  ppu_mul(t1, t2)
-  daddi cycle_balance, -bg_prefetch_tiles * tile_pixels * ppu_div
-  dsub cycle_balance, t1
-sp0_set_done:
-
-// TODO eol_early conflicts with sp0
+// HACK HACK HACK: EOL early is indefensible, why does it seem needed?
   daddi cycle_balance, (bg_fetch_tiles * tile_pixels - eol_early) * ppu_div
 
   bgezal cycle_balance, Scheduler.Yield

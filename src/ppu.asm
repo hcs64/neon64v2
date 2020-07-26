@@ -16,6 +16,7 @@ ppu_bg32_pat_lines:;  dd 0,0
 ppu_bg32_atr_lines:;  dd 0
 ppu_bg_x_lines:; dd 0
 ppu_sp_pri:;  dd 0
+ppu_sp0_cycle:; dd 0
 
 ppu_catchup_cb:; dw 0
 
@@ -427,8 +428,21 @@ WriteOAM:
 
 ReadStatus:
 // Out: cpu_t1
+
+  ld t1, ppu_sp0_cycle (r0)
   sb r0, ppu_scroll_latch (r0)
+// Check for sp0 hit
+  bltz t1,+
   lbu cpu_t1, ppu_status (r0)
+  ld t0, target_cycle (r0)
+  dadd t0, cycle_balance
+  dsub t0, t1
+  bltz t0,+
+  daddi t0, r0, -1
+  ori cpu_t1, 0b0100'0000 // sp0 hit
+  sd t0, ppu_sp0_cycle (r0)
++
+
 // NMI may have been asserted, clear it
   sb r0, nmi_pending (r0)
   andi t0, cpu_t1, 0b0111'1111
