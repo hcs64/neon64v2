@@ -140,10 +140,7 @@ sprites_enabled:
 if {defined PPU_MMC3} {
 // The counter ticks when fetch the first sprite tile
 
-// FIXME: It seems like the delay should be 4 (or even 3), since the pattern
-// fetch is at the 4th PPU cycle, but 5 seems to be more reliable in Kirby's
-// Adventure's pause screen. Something might be offset in an unobvious way.
-constant mmc3_irq_delay(5)
+constant mmc3_irq_delay(3)
 
   daddi cycle_balance, mmc3_irq_delay * ppu_div
   bgezal cycle_balance, Scheduler.Yield
