@@ -449,7 +449,7 @@ WriteDMCFlags:
   ls_gp(sb t2, apu_irqs)
 +
 // Set IRQ if active (bit 7, sign) and enabled flag is set (may have just become enabled)
-  bltz t2,+
+  bgez t2,+
   ori t1, intDMC
   sb t1, irq_pending (r0)
 +
