@@ -1,4 +1,4 @@
-Neon64 2.0 WIP
+Neon64 2.0 beta 3
 =================
 
 NES Emulation, On the N64, in the distant future...
