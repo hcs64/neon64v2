@@ -7,6 +7,11 @@ Architecture ideas:
     (besides the register file). The biggest issue is dealing with the
     random access pattern of the NES ROM. It might be possible to spread
     that out to leave gaps in physical address space.
+  * Note: I did some experiments with moving data and cold code away to
+    better fit hot code in 16K ICache (earlier I'd believed it was 32K, oops),
+    but this seemed to have zero or a small negative effect, so I abandoned it.
+    To understand this better I will need to e.g. modify cen64 to profile
+    cache misses.
 - Rework the scheduler so the CPU can run more than 1 instruction ahead,
   without having to yield constantly to allow other tasks to set interrupts.
 - dlists should be generated on the RSP to send to the RDP. This will
@@ -63,10 +68,10 @@ Easy
 - 69 (Sunsoft FME-7, Gimmick!, etc)
 
 Known bugs:
-- Profiling is wonky in PAL mode
-- Mike Tyson's Punch Out - A line is out of place on the first screen (MMC2 logic?)
-- Battletoads - Dark Queen doesn't appear on the monitor in pre-game
-- I have Y inc and X reset happening 8 pixels earlier than I think they should,
+* Profiling is wonky in PAL mode
+* Mike Tyson's Punch Out - A line is out of place on the first screen (MMC2 logic?)
+* Battletoads - Dark Queen doesn't appear on the monitor in pre-game
+* I have Y inc and X reset happening 8 pixels earlier than I think they should,
   this seems to fix a lot of scroll issues, but I don't understand why it's needed.
 
 * Audio
@@ -74,7 +79,7 @@ Known bugs:
   - Some audio glitching in Mega Man 2 intro (check hw?)
 
 * Crashes
-  - Qix bad opcode when finishing a line
+  - Qix glitches and then hits a bad opcode when finishing a line
   - Aladdin bad opcode before title screen
   - Streemerz needs unofficial opcodes
 

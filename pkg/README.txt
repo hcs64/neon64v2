@@ -27,8 +27,7 @@ The easiest way is to use a dev cart that supports using an NES emulator for
 
 Anything that loads the NES ROM at the "emulation standard" (0x200000) will work.
 
-The Neon64 ROM is only as long as it needs to be to be checksummed consistently,
-so it will also look for a NES ROM at 0x101000 so it can be directly appended.
+Alternatively, Neon64 will also look for a directly appeneded NES ROM at 0x101000.
 From a Windows command line:
 
 copy /b neon64bu.rom + game.nes game.n64
@@ -94,14 +93,16 @@ On most games only around 50% of frame time is used.
 Version history
 ---------------
 
-2020-07-?? -
+2020-07-27 -
   - Add mappers 9, 10 (MMC2, MMC4)
-  - Mid-line changes can now take effect (e.g. Marble Madness)
-  - Overlays, so mappers can modify the core PPU loop
-  - PAL switching
+  - Added overlays, so mappers can modify the core PPU loop
+  - Runtime PAL switch
   - Improved MMC3 IRQ timing
-  - DMC IRQ
-  - Scheduler tweaks
+  - DMC and frame counter IRQ
+  - Assorted timing adjustments
+  - Support some mid-line changes (e.g. Marble Madness)
+  - Fix MMC1 PRG mode 0 (e.g. Pirates!)
+  - SUROM support (Dragon Warrior III and IV)
 
 2020-07-07 - beta 2
   - Add mappers 30, 31, 71
@@ -124,6 +125,9 @@ Thanks to:
 * Eisi for adding MMC4 support in 1.2
 * bootgod et al for NesCartDB
 * tepples for helpful tests (and the Sprite Demo!)
+* Quietust for the Scanline demo, a helpful minimal example
+* Bero, Xodnizel, et al for FCE(U(X)), I've often referred to the source and debugger
+* lukexor for tetanes, handy Rust emu to modify for testing
 
 Many thanks to contributors to the NesDev wiki and ultra64.ca.
 
@@ -147,4 +151,4 @@ Git: https://github.com/hcs64/neon64v2
 Forum: https://hcs64.com/mboard/forum.php
 Email: agashlin@gmail.com
 
--hcs 2020-07-??
+-hcs 2020-07-27

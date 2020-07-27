@@ -2,7 +2,7 @@
 
 ## Running
 
-To run Neon64, check the [home page](https://hcs64.com/neon64.html) or [GitHub](https://github.com/hcs64/neon64v2/releases) for releases, which include a readme.
+To run Neon64, check the [home page](https://hcs64.com/neon64.html) or [GitHub](https://github.com/hcs64/neon64v2/releases) for releases, these include a manual in README.txt (from `pkg/README.txt`).
 
 ## Building
 
@@ -10,7 +10,7 @@ This project uses [ARM9's fork of the bass assembler](https://github.com/ARM9/ba
 
     make
 
-This will fetch bass, build the tools (bass and chksum64), and build neon64bu.rom. `make pkg` builds the release .zip.
+This will fetch bass, build the tools (bass and chksum64), and build neon64bu.rom. `make pkg` builds the release ZIP.
 
 ## Overview
 
@@ -38,15 +38,15 @@ The most common thing the 6502 does is read bytes at the current PC, so PC is a 
 
 The N, Z, and C flags are used somewhat less often than they are set, so I defer updating them; operations that would change then save the relevant value in `cpu_{n,z,c}_byte`. I'm not sure if this is a great idea in its current form, I haven't profiled without it.
 
-In the profile bars, CPU task time is bright green.
+In the profile bars, CPU task time is bright green. Currently this includes any immediate catchup before a CPU write to the APU or PPU, since the task doesn't switch.
 
 ### PPU
 
-The CPU-side PPU task is `FrameLoop` in `ppu_task.asm`, broadly: Fetch sprites, fetch background, repeat. The PPU yields for sprite 0 hit and vblank, and between hblank and visible pixels, when per-line changes are likely to occur.
+The CPU-side PPU task is `FrameLoop` in `ppu_task.asm`, broadly: Fetch sprites, fetch background, repeat. The PPU yields for long stretches after blocks of work, these happen instantaneously with respect to the CPU, except the background fetch (see `ppu_catchup_cb` below).
 
-Profiling in an earlier version showed that the hottest loop was checking all 64 sprites on each of 240 lines, so instead sprite evaluation scans OAM once per frame. Each line has a list of up to 8 sprites that occur on that line. Tile fetches are done before the background fetches for each line.
+Profiling in an earlier version showed that the hottest loop was checking all 64 sprites on each of 240 lines, so instead sprite evaluation scans OAM once per frame. Each line has a list of up to 8 sprites that occur on that line. Tile fetches are done before the background fetches for each line. Sprite 0 hit uses a cycle timer, checked on PPU status read.
 
-The background fetch is a Duff's device-ish loop, each iteration deals with all tiles using the same attribute byte, flow enters the loop depending on the alignment of the X scroll. The PPU sets up the loop variables and installs a hook, then the PPU yields. If the 6502 makes a write to PPU registers, it uses the hook to catch up the PPU first; this allows for mid-scanline changes. (Currently this reinitializes everything when catching up, on every register write during non-vblank scanlines. It should be possible to reduce this time substantially, I suspect it is particularly bad for writes to 2007 when rendering is disabled.)
+The background fetch is a Duff's device-ish loop, each iteration deals with all tiles using the same attribute byte, flow enters the loop depending on the alignment of the X scroll. The PPU sets up the loop variables and installs a hook (`ppu_catchup_cb`), then the PPU yields. If the 6502 makes a write to PPU registers, it uses the hook to catch up tile fetching; this allows for mid-scanline changes. (Currently this reinitializes most things when catching up, on every register write during non-vblank scanlines. It should be possible to reduce this time substantially, I suspect it is particularly bad for writes to 2007 when rendering is disabled.)
 
 The CPU fetches the pattern and attribute bytes, then passes these off to the RSP. The bytes collect in 64-bit shift registers, written out uncached when full; the VR4300's write buffer can help absorb the latency of a few big uncached writes, without wasting DCache on something the CPU never reads again. When the CPU has finished 8 lines, it writes out some additional data and then updates a write cursor in RSP DMEM, letting the ucode know it can DMA in the block. This isn't a fully functional FIFO; the CPU won't start writing again until the ucode has finished the frame. The structure of this "conv" buffer is in `mem.asm`.
 
@@ -58,7 +58,7 @@ The PPU ucode relies heavily on RSP vector ops: Multiply and accumulate to "shif
 
 When the RSP has DMAd the textures out to RDRAM, it issues a `break`, which interrupts the CPU and schedules a frame task. The frame task waits for a free framebuffer, waits for the RDP to finish, and executes the dlist. Ideally this would instead be run by the RSP, using the XBUS so a dlist needs never touch RDRAM. The frame task does things like controller polling and profile reporting, as well, which don't fit nicely elsewhere.
 
-The RDP interrupt handles round-robin scheduling of three dlists, the main PPU frame output, text rendering, and profile bars, currently. When the main frame dlist ends with a Full Sync, the RDP interrupt stores the framebuffer pointer for use at the next VI interrupt.
+The RDP interrupt handles round-robin scheduling of three dlists, currently: the main PPU frame output, text rendering, and profile bars. When the main frame dlist ends with a Full Sync, the RDP interrupt stores the framebuffer pointer for use at the next VI interrupt.
 
 The PPU has mappings for each 1k page in the PPU address space. CHR ROM access uses a write-protected TLB page to avoid checking for permission at write time, the exception handler attempts to skip the offending instruction.
 
@@ -94,7 +94,7 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 
 - `regs.inc`: A register file is a tiny address space!
 
-    A few registers are reserved for the 6502 CPU and PPU, so they can keep state in registers across yield; I protect these by not defining their common name. This isn't effective on the PPU in this version, but it will come in handy with mid-scanline processing. Registers that are dedicated on the CPU are free on the RSP under names like `sp_*`. Any regs that are not dedicated will be clobbered on yield.
+    A few registers are reserved for the 6502 CPU and PPU, so they can keep state in registers across yield; I protect these by not defining their common name. Registers that are dedicated on the CPU are free on the RSP under names like `sp_*`. Any regs that are not dedicated will be clobbered on yield.
 
 - `tlb.asm`: TLB init, static and dynamic (add-only) TLB page allocation. New pages are added by CPU init and mappers to swap and mirror banks in CPU address space.
 
@@ -106,9 +106,11 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 
     NOTE: These macros don't work properly in a scope!
 
-- `exception.asm`: VR4300 COP0 exception inits and vector. The exception vector acknowledges interrupts and passes control off to the various handlers. It handles one exception (TLB modifiction, for write protect) and displays an error for the rest. Includes support for debugging hangs (via the timer interrupt) and memory access (via the watch exception).
+- `exception.asm`: VR4300 COP0 exception inits and vector. The exception vector acknowledges interrupts and passes control off to the various handlers. It handles two exceptions: TLB modifiction for write protect, and a syscall for atomic dlist scheduling (this should probably be used more widely). It displays an error message for unhandled exceptions. Includes support for debugging hangs (via the timer interrupt) and memory access (via the watch exception).
 
 - `overlay.asm`: A simple overlay system. Several chunks of code and bss are assembled for the same RAM region, fit to the largest. This writes out temporary `OVL_*.bin` files, later included back into the main binary, and includes an index to load them from ROM. Currently used for mappers, including a modified PPU task for MMC2, MMC3, and MMC4, mostly to avoid checking for mapper hooks in the PPU task, but it also saves cache.
+
+    The overlay macros also don't work in a scope, but they can contain scopes between begin and end.
 
 - `loader.asm`: Initial load, and allows for switching between different builds through resident vectors. Used for rebooting into PAL mode, since timing affects too much to handle easily with overlays.
 
@@ -123,11 +125,11 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 
 ### Hardware interfacing
 
-- `lib/n64.inc`, `lib/n64_gfx.inc`, `lib/n64_rsp.inc`: RCP definitions and convenience macros.
+- `lib/mips.inc`, `n64.inc`, `n64_gfx.inc`, `n64_rsp.inc`: CPU, RCP definitions and convenience macros.
 
-    These are from krom's [N64 Bare Metal](https://github.com/PeterLemon/N64) repo, full of many excellent examples and tests for every aspect of the N64. I've added a few things, notably MIPS cache ops.
+    These are mostly from krom's [N64 Bare Metal](https://github.com/PeterLemon/N64) repo, full of many excellent examples and tests for every aspect of the N64. I've added a few things, notably MIPS cache ops.
 
-- `dlist.asm`: Static RDP display lists for NES rendering and profile bars, to keep it simple there is one for each framebuffer
+- `dlist.asm`: Static RDP display lists for PPU and profile bars, to keep it simple there is one for each framebuffer. Also templates for the text dlist.
 - `ai.asm`: Audio init and scheduling.
 - `pi.asm`: Cartridge bus DMA, used for NES ROM load and save to SRAM, sync or async
 - `pi_basics.asm`: Sync read, for use by `loader.asm`
@@ -143,7 +145,7 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 
 - `cpu.asm`: 6502 memory layout and init, instruction fetch (`FetchOpcode`), interrupts, and the building blocks of the opcodes.
 - `opcodes.asm`: Two-instruction entries for all (official) opcodes, mostly jumps into addressing modes in `cpu.asm`, distinguished by the instruction in the delay slot.
-- `cpu_io.asm`, `cpu_ppu.asm`: Read and write handlers for I/O (joypad), APU, and PPU, mostly jump tables and calls into `apu.asm` and `ppu.asm`. Async controller polling is in `cpu_io.asm`, started by the frame loop (this probably should be in `frame.asm` instead).
+- `cpu_io.asm`, `cpu_ppu.asm`: Read and write handlers for I/O (joypad), APU, and PPU, mostly jump tables and calls into `apu.asm` and `ppu.asm`.
 
 #### PPU
 
@@ -163,6 +165,13 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 - `rom.asm`: NES ROM loading, sets defaults for mapper 0, provides routines for building mappers, shell for mapper overlays.
 - `mappers/*`: A file for each supported iNES mapper, these are overlays managed by `rom.asm`. CPU and PPU memory map init (TLB and hooks), register handlers.
 
+### Tools
+- `tools/bass`: Git submodule link to the [bass assembler](https://github.com/ARM9/bass)
+- `tools/chksum64.c`: Sets the header checksum, GPL licensed by Andreas Sterbenz, minor tweaks to compile on x86_64.
+- `tools/interleave_font.c`: Produces `rdpfont.bin` from `font.bin`
+- `tools/reverse_bits.c`: Builds the bit reversal lookup table
+- `tools/scale_dmc.c`: Builds the DMC timing tables
+
 ### Etc
 
 - `lib/debug_print.asm`: String copies and integer formatting. Supports outputting to an IS Viewer debug port, I've used this with cen64's `-is-viewer` option.
@@ -172,3 +181,4 @@ In the profile bars, APU task time is grey. This usually doesn't show up much on
 - `N64_BOOTCODE.BIN`: Required (with a 6102 CIC) to pass the IPL checksum, loads the first 1MB into RDRAM at boot.
 - `font.bin`: 8x8 1bpp font
 - `rdpfont.bin`: 8x8 1bpp font, interleaved for use as 4bpp on the RDP with palettes that select each bitplane
+- `pkg/roms/efp6.nes`, `nestify7.nes`: Two NES programs, [Escape from Pong](https://hcs64.com/efp.html) and [Nestify](https://github.com/hcs64/Nestify). These are run if no ROM is found, as an easter egg.
