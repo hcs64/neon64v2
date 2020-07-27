@@ -74,11 +74,9 @@ Known bugs:
   - Some audio glitching in Mega Man 2 intro (check hw?)
 
 * Crashes
-  - Pirates! bad opcode on startup
   - Dragon Warrior IV bad opcode on startup
   - Qix bad opcode when finishing a line
   - Aladdin bad opcode before title screen
-  - Bashi Bazook (proto) bad opcode on startup, needs NES 2.0?
   - Streemerz needs unofficial opcodes
 
 * Mid-frame palette change

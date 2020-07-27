@@ -64,7 +64,7 @@ MMC1PrgMode01:
   mtc0 t1, Index
 
   ls_gp(lw t1, prgrom_start_phys)
-  andi a1, 0b0'1110
+  andi a1, t0, 0b0'1110
 // TODO high PRG ROM bit in reg 1
   ls_gp(lwu t2, prgrom_mask)
   sll a1, 14 // 16K
