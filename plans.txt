@@ -22,7 +22,6 @@ Missing features needed for better accuracy:
 - BG-accurate SP0 hit
 - Bug-accurate Sprite overflow
 - Read of PPU activity
-- Frame counter IRQ
 - Palette deemphasis, greyscale
 - Proper screen size for PAL
 - Video signal parameters (slightly too narrow? starts too late?)
@@ -77,6 +76,7 @@ Known bugs:
 * Crashes
   - Aladdin bad opcode on startup
   - Pirates! bad opcode on startup
+  - Qix bad opcode when finishing a line
   - Bashi Bazook (proto) locks up on load, needs NES 2.0?
   - Dragon Warrior IV locks up on load
   - Streemerz needs unofficial opcodes
@@ -92,6 +92,5 @@ Known bugs:
   - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset?)
 
 * MMC1
-  - Half of Qix playfield is corrupt (MMC1 board variant?)
   - Nobunaga's Ambition title screen and in-game are messed up (MMC1 board variant)
   - Rad Racer Game Over map is corrupt (MMC1 board variant?)

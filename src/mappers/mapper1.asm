@@ -308,7 +308,7 @@ mmc1_regs:;             dw 0
 
 align(8)
 // intentionally misalign so mmc1_write_reg_jump_table+1*4 is 8 byte aligned
-  dw 0 
+  dw 0
 mmc1_write_reg_jump_table:; fill 4*4
 
 mmc1_prgrom_tlb_index:; db 0

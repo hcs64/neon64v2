@@ -107,7 +107,7 @@ if {defined LOG_DMC} {
   jal Scheduler.ScheduleTaskFromNow
   lli a2, apu_dmc_task
 
-  jal APU.ResetFrameCounter
+  jal ResetFrameCounter
   nop
 
   lw ra, -8(sp)
@@ -116,7 +116,6 @@ if {defined LOG_DMC} {
 
 WriteFrameCounter:
 // cpu_t0: Write to 0x4017
-// TODO IRQ can change, probably handle that in ResetFrameCounter?
   jal Render
   nop
 
@@ -155,10 +154,15 @@ ResetFrameCounter:
   sw ra, 0(sp)
   addi sp, 8
 
-  lbu t0, irq_pending (r0)
   ls_gp(sb r0, apu_frame_counter)
+
+// Reset IRQ
+  lbu t0, irq_pending (r0)
+  ls_gp(lbu t1, apu_irqs)
   andi t0, intAPUFrame^0xff
   sb t0, irq_pending (r0)
+  andi t1, 0b1011'1111
+  ls_gp(sb t1, apu_irqs)
 
   jal ScheduleFrameStep
   nop
@@ -923,8 +927,10 @@ _4_step_4:
   andi t1, 0b0100'0000 // IRQ inhibit
   bnez t1,+
   ori t0, intAPUFrame
-// TODO fix this, StarsSE hangs with this enabled. Should I assume IRQ inhibit is set on reset?
-  //sb t0, irq_pending (r0)
+  ls_gp(lbu t1, apu_irqs)
+  sb t0, irq_pending (r0)
+  ori t1, 0b0100'0000
+  ls_gp(sb t1, apu_irqs)
 +
 
   j done
