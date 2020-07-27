@@ -200,18 +200,19 @@ DisplayDebugAndHalt:
   jal PrintHeaderInfo
   nop
 
-// TODO this loop makes little sense
 -
   ls_gp(lw a0, active_framebuffer)
-  beqz a0,-
-  addi a0, (16*width+22)*2
+  bnez a0,-
+  nop
+
+  la a0, framebuffer0 + (16*width+22)*2
   jal VI.PrintDebugToScreen
   lli a1, 30
 
   jal NewlineAndFlushDebug
   nop
 
-  ls_gp(lw a0, active_framebuffer)
+  la a0, framebuffer0
   ls_gp(sw r0, active_framebuffer)
   ls_gp(sw a0, finished_framebuffer)
 
