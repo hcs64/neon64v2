@@ -103,6 +103,12 @@ FetchOpcode:
 dont_take_int:
 
 if {defined LOG_CPU} {
+if 1 != 1 {
+  ls_gp(lbu t0, menu_enabled)
+  beqz t0,+
+  nop
+}
+
   move a0, cpu_t0
   jal PrintHex
   lli a1, 2
@@ -112,6 +118,7 @@ if {defined LOG_CPU} {
 
   jal NewlineAndFlushDebug
   nop
++
 }
 
   addi cpu_mpc, 1

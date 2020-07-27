@@ -5,8 +5,20 @@ constant prgrom_page_shift(14)  // 16K
 constant chrrom_page_shift(13)  // 8K
 
 begin_overlay_region(mapper_overlay)
-begin_overlay(1)
+
+constant MMC1_base(1)
+constant MMC1_SUROM(2)
+
+define MMC1_VARIANT(MMC1_base)
+begin_overlay(1_base)
 include "mappers/mapper1.asm"
+
+define MMC1_VARIANT(MMC1_SUROM)
+begin_overlay(1_SUROM)
+include "mappers/mapper1.asm"
+
+define MMC1_VARIANT()
+
 begin_overlay(2)
 include "mappers/mapper2.asm"
 begin_overlay(3)
@@ -188,7 +200,23 @@ macro consider_mapper(id) {
   la_gp(ra, mapper_ok)
 +
 }
-  consider_mapper(1)
+
+  lli t2, 1
+  bne t0, t2, not_mmc1
+  nop
+  ls_gp(lbu t0, prgrom_page_count)
+  lli t1, 512/16
+  bne t0, t1,+
+  nop
+  load_overlay_from_rom(mapper_overlay, 1_SUROM)
+  j Mapper1_MMC1_SUROM.Init
+  la_gp(ra, mapper_ok)
++
+  load_overlay_from_rom(mapper_overlay, 1_base)
+  j Mapper1_MMC1_base.Init
+  la_gp(ra, mapper_ok)
+
+not_mmc1:
   consider_mapper(2)
   consider_mapper(3)
   consider_mapper(4)

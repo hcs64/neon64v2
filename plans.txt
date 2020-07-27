@@ -74,7 +74,6 @@ Known bugs:
   - Some audio glitching in Mega Man 2 intro (check hw?)
 
 * Crashes
-  - Dragon Warrior IV bad opcode on startup
   - Qix bad opcode when finishing a line
   - Aladdin bad opcode before title screen
   - Streemerz needs unofficial opcodes
@@ -88,6 +87,7 @@ Known bugs:
   - Jurassic Park - Ocean logo on the title screen has a few lines out of place, (mid-line fine X? timing?)
   - Marble Madness - There's a little flickering before the level start text box
   - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset?)
+  - Pirates! - Flashing in lower right corner of town image
 
 * MMC1
   - Nobunaga's Ambition title screen and in-game are messed up (MMC1 board variant)
