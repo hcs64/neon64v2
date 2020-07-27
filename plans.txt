@@ -93,6 +93,8 @@ Known bugs:
   - Marble Madness - There's a little flickering before the level start text box
   - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset?)
   - Pirates! - Flashing in lower right corner of town image
+  - Fantasy Zone (Unlicensed) - Title screen text bounces
+  - Battletoads - Small screen bounce as the walkers phase in
 
 * MMC1
   - Nobunaga's Ambition title screen and in-game are messed up (MMC1 board variant)
