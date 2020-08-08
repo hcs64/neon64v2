@@ -155,10 +155,14 @@ include "profile_bars.asm"
 scope Joy {
 Init:
   lli t0, 0xffff
-  ls_gp(sw r0, joy1)
+  ls_gp(sw r0, joy + 0*4)
+  ls_gp(sw r0, joy + 1*4)
   ls_gp(sw r0, si_completion_vector)
 
-  ls_gp(sb t0, joy1_shift)
+  ls_gp(sh t0, joy_shift + 0*2)
+  ls_gp(sh t0, joy_shift + 1*2)
+  ls_gp(sb r0, joy_present + 0)
+  ls_gp(sb r0, joy_present + 1)
   ls_gp(sb r0, joy_strobe)
 
 // Clear pending SI interrupt
@@ -194,15 +198,37 @@ ReadBack:
   ls_gp(sw t0, si_completion_vector)
 
 Process:
-  ls_gp(lbu t1, menu_enabled)
-  ls_gp(lwu t0, read_con_buf + 4)
-  beqz t1,+
-  move t2, t0
-  lli t2, 0
+  ls_gp(lbu t4, menu_enabled)
+
+
+  ls_gp(lbu t0, read_con_buf + 0*8+2)
+  ls_gp(lbu t1, read_con_buf + 1*8+2)
+  andi t0, 0xc0
+  andi t1, 0xc0
+  bnez t0,+
+  lli t0, 0
+  lli t0, 1
+  ls_gp(lwu t2, read_con_buf + 0*8+4)
 +
-  ls_gp(sw t2, joy1)
+  ls_gp(sb t0, joy_present + 0)
+
+  bnez t1,+
+  lli t0, 0
+  lli t0, 1
+  ls_gp(lwu t3, read_con_buf + 1*8+4)
++
+  ls_gp(sb t0, joy_present + 1)
+
+  beqz t4,+
+  move a0, t2
+
+  lli t2, 0
+  lli t3, 0
++
+  ls_gp(sw t2, joy + 0*4)
+  ls_gp(sw t3, joy + 1*4)
 
 // Tail call
   j Menu.ProcessButtons
-  move a0, t0
+  nop
 }

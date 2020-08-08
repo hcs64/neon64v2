@@ -1,4 +1,4 @@
-Neon64 2.0 beta 3
+Neon64 2.0 WIP
 =================
 
 NES Emulation, On the N64, in the distant future...
@@ -93,7 +93,10 @@ On most games only around 50% of frame time is used.
 Version history
 ---------------
 
-2020-07-27 -
+2020-?? -
+  - Detect controllers, support controller 2
+
+2020-07-27 - beta 3
   - Add mappers 9, 10 (MMC2, MMC4)
   - Added overlays, so mappers can modify the core PPU loop
   - Runtime PAL switch

@@ -33,7 +33,6 @@ Missing features needed for better accuracy:
 
 Desired features:
 - Gameshark version
-- Controller 2
 - 4 player via Four Score
 - Remember PAL setting per-game
 - Control remapping
