@@ -76,10 +76,11 @@ Known bugs:
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud
   - Some audio glitching in Mega Man 2 intro (check hw?)
+  - Voices in High Hopes demo play too fast
 
 * Crashes
-  - Qix glitches and then hits a bad opcode when finishing a line
-  - Aladdin bad opcode before title screen
+  - Qix crashes when finishing a line (stack pointer desyncs?)
+  - Aladdin bad opcode before title screen (needs unofficial SLO)
   - Streemerz needs unofficial opcodes
 
 * Mid-frame palette change
