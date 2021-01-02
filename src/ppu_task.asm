@@ -111,6 +111,26 @@ if {defined LOG_VRAM_ADDR} {
   nop
 }
 
+if {defined PPU_MMC3} {
+// The counter ticks when we fetch the first sprite tile
+
+constant mmc3_irq_delay(3)
+
+  daddi cycle_balance, mmc3_irq_delay * ppu_div
+  bgezal cycle_balance, Scheduler.Yield
+  nop
+
+  lbu t0, ppu_mask (r0)
+  andi t0, 0b0001'1000
+  neg t0
+  bltzal t0, Mapper4.ScanlineCounter
+  nop
+// TODO consider different combinations of pattern tables, 8x16 sprites, 2006 clocking...
+  daddi cycle_balance, (sprite_fetch_pixels - mmc3_irq_delay) * ppu_div
+} else {
+  daddi cycle_balance, sprite_fetch_pixels * ppu_div
+}
+
   lbu t0, ppu_mask (r0)
   andi t0, 0b0001'0000
   bnez t0, sprites_enabled
@@ -131,31 +151,12 @@ if {defined LOG_VRAM_ADDR} {
   sb r0, sp0_this_line (r0)
 
   j sprite_fetch_done
-  daddi cycle_balance, sprite_fetch_pixels * ppu_div
+  nop
 
 sprites_enabled:
 // ##### Precompute what sprites end up on what lines.
 
 
-if {defined PPU_MMC3} {
-// The counter ticks when fetch the first sprite tile
-
-constant mmc3_irq_delay(3)
-
-  daddi cycle_balance, mmc3_irq_delay * ppu_div
-  bgezal cycle_balance, Scheduler.Yield
-  nop
-
-  lbu t0, ppu_mask (r0)
-  andi t0, 0b0001'1000
-  neg t0
-  bltzal t0, Mapper4.ScanlineCounter
-  nop
-// TODO consider different combinations of pattern tables, 8x16 sprites, 2006 clocking...
-  daddi cycle_balance, (sprite_fetch_pixels - mmc3_irq_delay) * ppu_div
-} else {
-  daddi cycle_balance, sprite_fetch_pixels * ppu_div
-}
   lbu t9, are_sprites_evaled (r0)
   la_gp(a0, num_sprites_line + 1)
   bnez t9, yes_sprites_evaled
