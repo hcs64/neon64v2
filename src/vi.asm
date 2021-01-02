@@ -61,8 +61,6 @@ Init:
   jal FillScreen
   lli a0, 0x0001
 
-  ls_gp(sb r0, vi_interrupt_wait)
-
 // Init dlist buffers
   la_gp(t0, dlists)
   lli t1, num_dlists
@@ -120,7 +118,6 @@ VI_Interrupt:
   ls_gp(ld t2, exception_regs + t2*8)
 +
 
-  ls_gp(sb r0, vi_interrupt_wait)
   jr k1
   ls_gp(ld t0, exception_regs + t0*8)
 
@@ -537,7 +534,6 @@ constant num_dlists(3)
 dlists:
   fill num_dlists*8
 
-vi_interrupt_wait:; db 0
 running_dlist_idx:; db 0
 
 align(4)
