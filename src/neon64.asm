@@ -200,10 +200,15 @@ DisplayDebugAndHalt:
   jal PrintHeaderInfo
   nop
 
+// Wait until no framebuffer actively being drawn
 -
   ls_gp(lw a0, active_framebuffer)
-  bnez a0,-
+  beqz a0,+
+// If no dlist is running the active framebuffer will never be finished, skip waiting
+  ls_gp(lw a0, running_dlist_idx)
+  bgez a0,-
   nop
++
 
   la a0, framebuffer0 + (16*width+22)*2
   jal VI.PrintDebugToScreen
