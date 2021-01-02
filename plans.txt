@@ -76,10 +76,11 @@ Known bugs:
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud
   - Some audio glitching in Mega Man 2 intro (check hw?)
-  - Voices in High Hopes demo play too fast
+  - Voices in High Hopes demo play too fast, overall PAL speed may be off?
 
 * Crashes
   - Qix crashes when finishing a line (stack pointer desyncs?)
+  - Bomberman II hangs before demo after title screen fades
   - Aladdin bad opcode before title screen (needs unofficial SLO)
   - Streemerz needs unofficial opcodes
 

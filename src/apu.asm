@@ -213,6 +213,7 @@ evaluate rep_i({rep_i}+1)
 +
 
 // Try filling the buffer now that length > 0
+// TODO this probably shouldn't be here?
   jal DMCRead
   nop
 
@@ -530,8 +531,6 @@ WriteDMCSampleLength:
 // cpu_t0: Write to 0x4013
   jal Render
   nop
-
-
   lw ra, cpu_rw_handler_ra (r0)
 
   jr ra
@@ -730,8 +729,8 @@ ReadStatus:
 
 // Calculate lengths == 0
   andi t1, t0, 0xff
-  slti cpu_t1, 1
-  or cpu_t1, t1
+  slti cpu_t1, t1, 1
+
   andi t1, t0, 0xff00
   slti t1, 1
   sll cpu_t1, 1
@@ -742,6 +741,7 @@ ReadStatus:
   slti t1, 1
   sll cpu_t1, 1
   or cpu_t1, t1
+
   andi t0, 0xff00
   slti t0, 1
   sll cpu_t1, 1
