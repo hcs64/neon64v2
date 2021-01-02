@@ -983,7 +983,7 @@ done:
 scope Render: {
   ld t2, target_cycle (r0)
   ls_gp(ld t0, apu_alist_cycle)
-  dadd t2, cycle_balance
+  dadd t2, cycle_balance // current cycle
   dsub t3, t2, t0 // cycles since we last sent a config to the alist
   bgez t3,+
   nop
@@ -999,17 +999,17 @@ alist_ahead:
   nop
 +
 
-constant stack_frame(32)
+constant stack_frame(16)
   addi sp, stack_frame
-constant stack_current_cycle(-8)
-  sd t2, stack_current_cycle (sp)
-constant stack_cycle_delta(-16)
-  sd t3, stack_cycle_delta (sp)
-constant stack_next_alist_idx(-24)
-constant stack_ra(-32)
+constant stack_next_alist_idx(-8)
+constant stack_cycle_delta(-12)
+constant stack_ra(-16)
   sw ra, stack_ra (sp)
 
 if {defined LOG_ALIST} {
+  // TODO
+  error "This needs to be fixed to not clobber t3 and t2"
+
   jal PrintDec
   ls_gp(ld a0, apu_alist_cycle)
   jal PrintStr0
@@ -1028,6 +1028,19 @@ if {defined LOG_ALIST} {
   jal NewlineAndFlushDebug
   nop
 }
+
+// DMA needs to be an even number of samples, so divide by an additional 2...
+  lli t4, cycles_per_sample*2
+  div t3, t4
+  mflo t3
+// ...and multiply out for an even count.
+  sll t3, 1
+  sw t3, stack_cycle_delta (sp)
+
+// Subtract remainder, we didn't render for these cycles this time
+  mfhi t3
+  dsub t2, t3
+  ls_gp(sd t2, apu_alist_cycle)
 
 // Check that the next alist entry is free
 wait_for_alist:
@@ -1066,24 +1079,13 @@ alist_free:
   sll t2, t0, alist_entry_size_shift
   add t1, t2
 
+  lw t0, stack_cycle_delta (sp)
 evaluate rep_i(0)
 while {rep_i} < alist_entry_size / DCACHE_LINE {
   cache data_create_dirty_exclusive, {rep_i} * DCACHE_LINE (t1)
 evaluate rep_i({rep_i}+1)
 }
-
-  ld t2, stack_cycle_delta (sp)
-// TODO cycles_per_sample is an integer (~400), this would be more accurate
-// with a multiply and divide
-  lli t4, cycles_per_sample
-  div t2, t4
-  mflo t2
-// Clear low bit, sample count has to be even for accurate DMA.
-// apu_min_render_cycles > 2 samples so this should be safe.
-// TODO this rounding should be biased somehow
-  andi t4, t2, 1
-  xor t2, t4
-  sw t2, alist_SampleDelta (t1)
+  sw t0, alist_SampleDelta (t1)
 
 // Pulse 1
   ls_gp(lbu t2, apu_len + apu_p1)
@@ -1224,10 +1226,8 @@ evaluate rep_i({rep_i}+1)
 
 // Finally, advance write index to allow RSP to read it
   lbu t2, stack_next_alist_idx (sp)
-  ld t0, stack_current_cycle (sp)
   lui t1, SP_MEM_BASE
   sw t2, SP_DMEM + dmem_alist_write (t1)
-  ls_gp(sd t0, apu_alist_cycle)
 
 // Try kicking off RSP rendering
   jal RSP.Run

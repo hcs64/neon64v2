@@ -31,11 +31,11 @@ constant cpu_div(16)
 constant ppu_div(5)
 constant vblank_lines(70)
 
-constant apu_quarter_frame_cycles(8311*cpu_div)
+constant apu_quarter_frame_cycles(8313*cpu_div)
 
 align(2)
 noise_period_table:
-  dh   4,   8,  14,  30,  60,   88,  118,  148
+  dh   4,   7,  14,  30,  60,   88,  118,  148
   dh 188, 236, 354, 472, 708,  944, 1890, 3778
 
 dmc_rate_table:
