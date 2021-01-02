@@ -243,7 +243,7 @@ io_write_label(0x4016)
   ls_gp(lbu t0, joy_present + 0)
   ls_gp(lbu a0, joy + 0*4+0)
   beqzl t0,+
-  lli a0, 0xffff
+  lli a0, 0
   ls_gp(lb a1, joy + 0*4+2)
   jal calculate_joy
   ls_gp(lb a2, joy + 0*4+3)
@@ -253,7 +253,7 @@ io_write_label(0x4016)
   ls_gp(lbu t0, joy_present + 1)
   ls_gp(lbu a0, joy + 1*4+0)
   beqzl t0,+
-  lli a0, 0xffff
+  lli a0, 0
   ls_gp(lb a1, joy + 1*4+2)
   jal calculate_joy
   ls_gp(lb a2, joy + 1*4+3)
