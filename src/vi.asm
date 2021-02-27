@@ -27,7 +27,7 @@ Init:
   lli t1, 0x200
   sw t1, VI_V_INTR(t0)
 // hsync width (pixels)(0), color burst width (pixels)(8), vsync height (lines)(16), color burst start (pixels from hsync)(20)
-  la t1, (50<<0)|(30<<8)|(5<<16)|(58<<20)
+  la t1, (50<<0)|(34<<8)|(5<<16)|(58<<20)
   sw t1, VI_TIMING(t0)
 // v sync, lines per frame
   lli t1, 525
