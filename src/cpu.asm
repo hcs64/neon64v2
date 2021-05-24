@@ -268,8 +268,11 @@ macro addr_r_absxy(reg) {
   bgez t0,+
   nop
 
+// Call read handler (reads into cpu_t1)
   jalr t0
-  nop
+  move cpu_t2, cpu_t1
+
+  move cpu_t1, cpu_t2
 +
 
 // Fix address, retry
@@ -343,8 +346,11 @@ cycle5a:
   bgez t0,+
   nop
 
+// Call read handler (reads into cpu_t1)
   jalr t0
-  nop
+  move cpu_t2, cpu_t1
+
+  move cpu_t1, cpu_t2
 +
 
 // Fix address, retry
@@ -412,7 +418,7 @@ scope addr_rw_abs: {
   bgez t0, pod_read
   move cpu_t2, cpu_t1
 
-// Call read handler
+// Call read handler (reads into cpu_t1)
   jr t0
   la_gp(ra, write_back)
 
@@ -513,7 +519,7 @@ no_fixup:
 
   bgez t2,+
   nop
-// Call read handler
+// Call read handler (reads into cpu_t1)
   jalr t2
   nop
 +
@@ -531,7 +537,7 @@ no_fixup:
 
   bgez t0, addr_rw_abs.pod_read
   move cpu_t1, cpu_t2
-// Call read handler
+// Call read handler (reads into cpu_t1)
   jr t0
   la_gp(ra, addr_rw_abs.write_back)
 

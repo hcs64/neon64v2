@@ -78,7 +78,6 @@ Known bugs:
   - Some audio glitching in Mega Man 2 intro (check hw?)
 
 * Crashes
-  - Qix crashes when finishing a line (stack pointer desyncs?)
   - Bomberman II hangs before demo after title screen fades
   - Aladdin bad opcode before title screen (needs unofficial SLO)
   - Streemerz needs unofficial opcodes
