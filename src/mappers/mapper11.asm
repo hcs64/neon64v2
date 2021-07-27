@@ -36,6 +36,8 @@ Write:
   sw ra, -8(sp)
 
 Write_alt:
+// TODO save cpu_t0 for save states
+
   and t3, cpu_t0, 3
   sll t3, t3, 15  // 32k PRG ROM bank
 
@@ -51,10 +53,10 @@ Write_alt:
   mtc0 t2, Index
 
   srl t0, cpu_t0, 4
-  sll t0, t0, chrrom_page_shift
+  sll t0, chrrom_page_shift
   ls_gp(lwu t2, chrrom_mask)
   ls_gp(lwu t1, chrrom_start)
-  and t3, t2
+  and t0, t2
   dadd t0, t1
   dsll32 t1, t0, 0
   or t0, t1
