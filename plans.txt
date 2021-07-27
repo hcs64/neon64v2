@@ -53,7 +53,6 @@ Desired features:
 Desired mappers:
 Easy
 - 34 (Deadly Towers)
-- 11 (Color Dreams)
 - 66 (SMB+Duck Hunt)
 
 - 111 (homebrew, memblers)
