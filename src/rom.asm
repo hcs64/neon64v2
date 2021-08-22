@@ -31,6 +31,8 @@ begin_overlay(9)
 include "mappers/mapper9.asm"
 begin_overlay(10)
 include "mappers/mapper10.asm"
+begin_overlay(11)
+include "mappers/mapper11.asm"
 begin_overlay(30)
 include "mappers/mapper30.asm"
 begin_overlay(31)
@@ -223,6 +225,7 @@ not_mmc1:
   consider_mapper(7)
   consider_mapper(9)
   consider_mapper(10)
+  consider_mapper(11)
   consider_mapper(30)
   consider_mapper(31)
   consider_mapper(71)
