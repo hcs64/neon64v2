@@ -78,6 +78,7 @@ Known bugs:
 
 * Crashes
   - Bomberman II hangs before demo after title screen fades
+  - Wally Bear and the No! Gang hangs on boot
   - Aladdin bad opcode before title screen (needs unofficial SLO)
   - Streemerz needs unofficial opcodes
 
