@@ -39,7 +39,7 @@ Write_alt:
 // TODO save cpu_t0 for save states
 
   and t3, cpu_t0, 3
-  sll t3, t3, 15  // 32k PRG ROM bank
+  sll t3, 15  // 32k PRG ROM bank
 
   ls_gp(lw a1, prgrom_start_phys)
   ls_gp(lw a0, mapper11_prgrom_vaddr)
