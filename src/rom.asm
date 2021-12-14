@@ -37,6 +37,8 @@ begin_overlay(30)
 include "mappers/mapper30.asm"
 begin_overlay(31)
 include "mappers/mapper31.asm"
+begin_overlay(34)
+include "mappers/mapper34.asm"
 begin_overlay(71)
 include "mappers/mapper71.asm"
 end_overlay_region()
@@ -228,6 +230,18 @@ not_mmc1:
   consider_mapper(11)
   consider_mapper(30)
   consider_mapper(31)
+// consider mapper 34 only with zero CHR ROM pages (BNROM)
+// when NINA-001 is supported this can be replaced with `consider_mapper(34)`
+  lli t2, 34
+  bne t0, t2,+
+  nop
+  ls_gp(lbu t2, chrrom_page_count)
+  bgtz t2,+
+  nop
+  load_overlay_from_rom(mapper_overlay, 34)
+  j Mapper34.Init
+  la_gp(ra, mapper_ok)
++
   consider_mapper(71)
 // HACK pretend 206 is 4
   lli t2, 206
