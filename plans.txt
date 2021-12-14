@@ -80,6 +80,8 @@ Known bugs:
   - Bomberman II hangs before demo after title screen fades
   - Wally Bear and the No! Gang hangs on boot
   - Aladdin bad opcode before title screen (needs unofficial SLO)
+  - Deadly Towers game over screen triggers bad opcode $fa after several seconds.
+    Quickly starting a new game can avoid the issue.
   - Streemerz needs unofficial opcodes
 
 * Mid-frame palette change

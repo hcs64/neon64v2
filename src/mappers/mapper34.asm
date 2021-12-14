@@ -39,7 +39,7 @@ Init:
   lw ra, -8(sp)
   addi sp, -8
 
-// Initially map PRG ROM bank 0, Nametable 0
+// Initially map PRG ROM bank 0, fall through to Write
   lli cpu_t0, 0
 
 Write:
