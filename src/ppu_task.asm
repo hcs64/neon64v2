@@ -114,7 +114,7 @@ if {defined LOG_VRAM_ADDR} {
 if {defined PPU_MMC3} {
 // The counter ticks when we fetch the first sprite tile
 
-constant mmc3_irq_delay(3)
+constant mmc3_irq_delay(4)
 
   daddi cycle_balance, mmc3_irq_delay * ppu_div
   bgezal cycle_balance, Scheduler.Yield
@@ -583,13 +583,9 @@ bg_render_enabled:
   sd t2, ppu_sp0_cycle (r0)
 +
 
-// HACK HACK HACK: EOL early is indefensible, why does it seem needed?
-  daddi cycle_balance, (bg_fetch_tiles * tile_pixels - eol_early) * ppu_div
-
+  daddi cycle_balance, bg_fetch_tiles * tile_pixels * ppu_div
   bgezal cycle_balance, Scheduler.Yield
   nop
-
-  daddi cycle_balance, eol_early * ppu_div
 
 // If there is still fetch left when we resume, finish it.
   lw t0, ppu_catchup_cb (r0)

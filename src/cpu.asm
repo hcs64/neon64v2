@@ -20,6 +20,7 @@ constant flagC(0x01)
 constant intAPUFrame(0x01)
 constant intMMC3(0x02)
 constant intDMC(0x04)
+constant intDelayed(0x80)
 
 begin_low_page()
 
@@ -1556,18 +1557,38 @@ TakeBRK:
 
 TakeInt:
   lbu t0, nmi_pending (r0)
+  lb t1, irq_pending (r0)
   lbu t2, cpu_flags (r0)
 
-  bnez t0, TakeNMI
+  beqz t0,+
+// Decrement nmi_pending to delay by one instruction also clear once NMI
+// is taken.
+  subiu t0, 1
+  beqz t0, TakeNMI
+  sb t0, nmi_pending (r0)
+
++
   andi t2, flagI
 
-// If we got here we must have already seen irq_pending nonzero
-
-  beqz t2, TakeIRQ
-  nop
-
+  beqz t2,+
+  andi t3, t1, 0x7f
+// Interrupt is currently masked
   j dont_take_int
+  sb t3, irq_pending (r0)
++
+
+  bnez t3,+
   nop
+// There wasn't anything left pending, clear intDelayed
+  j dont_take_int
+  sb r0, irq_pending (r0)
++
+
+  bltz t1, TakeIRQ
+// Set flag to interrupt next instr
+  ori t1, 0x80
+  j dont_take_int
+  sb t1, irq_pending (r0)
 
 TakeIRQ:
 if {defined LOG_CPU} || {defined LOG_IRQ} {
@@ -1586,10 +1607,6 @@ if {defined LOG_CPU} || {defined LOG_IRQ} {
   take_interrupt(0xfffe, 1, 0)
 
 TakeNMI:
-  subi t0, 1
-  bnezl t0, dont_take_int
-  sb t0, nmi_pending (r0)
-
 if {defined LOG_CPU} || {defined LOG_IRQ} {
   jal PrintStr0
   la_gp(a0, nmi_msg)
@@ -1601,8 +1618,6 @@ if {defined LOG_CPU} || {defined LOG_IRQ} {
   nop
 }
   lbu cpu_t0, cpu_stack (r0)
-// Technically NMI is edge-triggered, but this should work.
-  sb r0, nmi_pending (r0)
 
   daddi cycle_balance, cpu_div * 7
 

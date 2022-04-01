@@ -85,7 +85,6 @@ constant visible_pixels(256)
 constant hblank_pixels(sprite_fetch_pixels+bg_prefetch_pixels+bg_dummy_nt_pixels)
 constant scanline_pixels(idle_pixels+visible_pixels+hblank_pixels)
 constant vblank_delay(1)
-constant eol_early(8)
 
 begin_overlay_region(ppu_overlay)
 begin_overlay(base)

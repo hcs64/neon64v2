@@ -69,8 +69,6 @@ Known bugs:
 * Profiling is wonky in PAL mode
 * Mike Tyson's Punch Out - A line is out of place on the first screen (MMC2 logic?)
 * Battletoads - Dark Queen doesn't appear on the monitor in pre-game
-* I have Y inc and X reset happening 8 pixels earlier than I think they should,
-  this seems to fix a lot of scroll issues, but I don't understand why it's needed.
 
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud
@@ -88,11 +86,13 @@ Known bugs:
   - Wizards & Warriors - status bar
 
 * Timing
-  - Rad Racer - lots of lines out of place (mid-line fine X? EOL early?)
+  - Rad Racer - lots of lines out of place (mid-line fine X?)
   - Jurassic Park - Ocean logo on the title screen has a few lines out of place, (mid-line fine X? timing?)
   - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset? IRQ timing?)
-  - Status bar flickers in Recca. IRQ timing?
   - Battletoads - Small screen bounce as the walkers phase in
+  - Battletoads - Flicker at bottom of status bar
+  - Big Nose Freaks Out - "Select Game Type" screen bounce
+  - Kirby - Flicker on edge of status bar on overworld screens
 
 * MMC1
   - Nobunaga's Ambition title screen and in-game are messed up (MMC1 board variant)
