@@ -1028,6 +1028,7 @@ if {defined DUMP_VRAM} {
   sb t0, ppu_status (r0)
 
   andi t1, 0b1000'0000
+  srl t1, 7-1
   sb t1, nmi_pending (r0)
 
   la t0, (vblank_lines * scanline_pixels - vblank_delay) * ppu_div

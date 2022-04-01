@@ -1586,6 +1586,10 @@ if {defined LOG_CPU} || {defined LOG_IRQ} {
   take_interrupt(0xfffe, 1, 0)
 
 TakeNMI:
+  subi t0, 1
+  bnezl t0, dont_take_int
+  sb t0, nmi_pending (r0)
+
 if {defined LOG_CPU} || {defined LOG_IRQ} {
   jal PrintStr0
   la_gp(a0, nmi_msg)

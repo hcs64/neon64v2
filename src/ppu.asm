@@ -274,6 +274,7 @@ WriteCtrl:
   lbu t1, ppu_status (r0)
   and t0, cpu_t0, t1
   andi t0, 0b1000'0000
+  srl t0, 7-1
   sb t0, nmi_pending (r0)
 +
   jr ra

@@ -77,7 +77,6 @@ Known bugs:
   - Some audio glitching in Mega Man 2 intro (check hw?)
 
 * Crashes
-  - Bomberman II hangs before demo after title screen fades
   - Wally Bear and the No! Gang hangs on boot
   - Aladdin bad opcode before title screen (needs unofficial SLO)
   - Deadly Towers game over screen triggers bad opcode $fa after several seconds.
