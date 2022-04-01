@@ -1282,7 +1282,7 @@ ex_taken_branch:
 // If we're still on the same page, no need to remap PC
   xor cpu_t1, cpu_t2
   andi t0, cpu_t1, 0xff00
-  beqz t0, TestNextCycleAndFetchOpcode
+  beqz t0, FetchOpcode
   addu cpu_mpc, cpu_t0
 
 // Cycle 4: Fetch opcode of wrong next inst (WONTFIX), fix PCH
@@ -1292,10 +1292,11 @@ ex_taken_branch:
 
   srl cpu_t1, 8-2
   lw t0, cpu_read_map (cpu_t1)
-// fill delay slot?
+// inc here and use TestNextCycleAndFetchOpcode to fill load delay slot
+  daddi cycle_balance, cpu_div
   addu cpu_mpc, t0, cpu_t2
 
-  j FinishCycleAndFetchOpcode
+  j TestNextCycleAndFetchOpcode
   sw t0, cpu_mpc_base (r0)
 
 ex_sec:
