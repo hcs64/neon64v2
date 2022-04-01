@@ -88,12 +88,10 @@ Known bugs:
   - Wizards & Warriors - status bar
 
 * Timing
-  - Rad Racer - single lines out of place (mid-line fine X? timing?)
+  - Rad Racer - lots of lines out of place (mid-line fine X? EOL early?)
   - Jurassic Park - Ocean logo on the title screen has a few lines out of place, (mid-line fine X? timing?)
-  - Marble Madness - There's a little flickering before the level start text box
-  - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset?)
-  - Pirates! - Flashing in lower right corner of town image
-  - Fantasy Zone (Unlicensed) - Title screen text bounces
+  - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset? IRQ timing?)
+  - Status bar flickers in Recca. IRQ timing?
   - Battletoads - Small screen bounce as the walkers phase in
 
 * MMC1
