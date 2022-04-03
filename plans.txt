@@ -68,7 +68,6 @@ Easy
 Known bugs:
 * Profiling is wonky in PAL mode
 * Mike Tyson's Punch Out - A line is out of place on the first screen (MMC2 logic?)
-* Battletoads - Dark Queen doesn't appear on the monitor in pre-game
 
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud

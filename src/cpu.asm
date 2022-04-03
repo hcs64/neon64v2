@@ -1448,7 +1448,8 @@ scope InitCPU: {
 // TODO: consider randomizing
   lli t0, nes_ram
   lli t1, 0x800
--;sd r0, 0(t0)
+  addi t2, r0, -1
+-;sd t2, 0(t0)
   addi t1, -8
   bnez t1,-
   addi t0, 8
