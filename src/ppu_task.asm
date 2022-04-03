@@ -52,9 +52,8 @@ scope FrameLoop: {
 // pre-render scanline
   daddi cycle_balance, idle_pixels * ppu_div
 
-// Clear vblank, sp0, overflow in status and clear NMI
+// Clear vblank, sp0, overflow in status
   lbu t0, ppu_status (r0)
-  sb r0, nmi_pending (r0)
   andi t0, 0b0001'1111
   sb t0, ppu_status (r0)
   daddi t0, r0, -1
