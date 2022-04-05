@@ -113,6 +113,27 @@ still_fail:
   addi a0, 16
   ls_gp(sw a0, nes_rom_cart_addr)
 
+// Check for NES 2.0 header
+  ls_gp(lbu t0, nes_header + 7)
+  andi t0, 0b1100
+  lli t1, 0b1000
+  bne t0, t1, after_nes2
+  nop
+// NES 2.0 header detected
+// TODO: submapper, CHRRAM size
+
+if {defined NTSC_NES} {
+// Check if we should switch to PAL mode from default NTSC mode
+// TODO Probably shouldn't do this if we were manually switched back to PAL mode
+  ls_gp(lbu t0, nes_header + 12)
+  lli t1, 1 // PAL
+  andi t0, 0b11
+  beq t0, t1, SwitchModel
+  nop
+}
+
+after_nes2:
+
 // Save start of PRG ROM (physical, for TLB)
   la t0, nes_rom & 0x1fff'ffff
   ls_gp(sw t0, prgrom_start_phys)

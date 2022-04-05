@@ -34,7 +34,6 @@ Missing features needed for better accuracy:
 Desired features:
 - Gameshark version
 - 4 player via Four Score
-- Remember PAL setting per-game
 - Control remapping
 - Arkanoid paddle
 - Zapper
@@ -48,7 +47,7 @@ Desired features:
 - Save to Controller Pak
 - Savestate (Expansion Pak, persistent)
 - Unlock framerate, fast-forward
-- Some NES 2.0 support? (PAL, submapper, CHRRAM size, etc)
+- Some NES 2.0 support? (submapper, CHRRAM size, etc)
 
 Desired mappers:
 Easy
