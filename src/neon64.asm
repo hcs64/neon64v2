@@ -285,7 +285,7 @@ crc_message:
 
 copyright_message:
   db "\n\n"
-  db "Copyright 2020      \n"
+  db "Copyright 2020-2022 \n"
   db "Adam Gashlin (hcs)  \n"
   db "\n",0
 license_message:

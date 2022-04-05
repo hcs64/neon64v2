@@ -11,8 +11,8 @@ Features
 - PPU
 - APU channels (2 square, triangle, noise, DMC)
 - Battery backed RAM save to SRAM
-- iNES mappers #s 0,1,2,3,4,7,9,10,30,31,71
-- Controller 1 (D-pad + analog)
+- iNES mappers #s 0,1,2,3,4,7,9,10,11,30,31,34,71
+- Controllers 1 and 2  (D-pad + analog)
 
 There's a lot missing, but it's already worlds better than 1.2.
 
@@ -39,9 +39,9 @@ cat neon64bu.rom game.nes > game.n64
 Controls
 --------
 
-A, B, Start and the D-pad on controller 1 are mapped in the obvious way. Select
-is the Z button. The analog stick is roughly like the D-pad, it may be easier to
-use with games allowing diagonal movement.
+A, B, Start and the D-pad on controllers 1 and 2 are mapped in the obvious way.
+Select is the Z button. The analog stick is roughly like the D-pad, it may be
+easier to use with games allowing diagonal movement.
 
 To access the menu, hold the L and R shoulder buttons. Navigate with the D-pad
 or Z, select an option with A or Start. Hold L and R again to dismiss the menu.
@@ -57,44 +57,25 @@ tested with 1.14e.
 Saves should be compatible with Visor's "Neon64 with Savestates" 0.3c, though
 savestates are not yet supported.
 
-Architecture
-------------
-
-I split up the 6502 CPU ops to reduce code size. All ucode fits in IMEM
-together. Overlays keep only the active mapper in RAM, and provide
-modified PPU cores for MMC2, MMC3, and MMC4.
-
-The CPU runs the main PPU loop. It passes the bytes read to the RSP, which
-converts the background to a 4bpp texture and arranges sprites in an 8bpp
-texture.
-
-The RDP renders each frame, layering sprites and background, with tricky
-palettes to use the same texture for BG and FG sprites.
-
-The RSP synthesizes audio, driven by alists from the CPU. When the PCM buffer
-runs low, the AI interrupt can request an immediate flush to stretch the alist.
-
-The CPU has a cooperative scheduler, using an emulated cycle timer to trade off
-between the CPU and PPU. This works mainly with daddi+bgezl.
-
-While the PPU is fetching background tiles, it can yield; if the CPU task does
-any writes that would affect graphics mid-line, it will let the fetch catch up
-first.
-
-The RSP has a separate coop scheduler. When a task yields it can run code on the
-CPU via the RSP break interrupt.
-
-I use the TLB to swap and mirror banks (PC is a native pointer), write protect
-CHR ROM, place data at addresses below 32K (for free indexing), and mirror all
-RDRAM (so bit 31 can be used as a flag).
-
-On most games only around 50% of frame time is used.
-
 Version history
 ---------------
 
-2020-?? -
-  - Detect controllers, support controller 2
+2022-04-?? - beta 4
+New:
+  - Controller 2!
+  - Mapper 11 (various Color Dreams), thanks to sp1187!
+  - Mapper 34 (Deadly Towers), thanks to ddp34!
+Fixed:
+  - Controller detection issues #3 and #5
+  - More accurate PCM playback on PAL (e.g. High Hopes demo)
+  - More compatible video signal for compatibility with Retrotink (issue #8)
+  - DMC looping (Bomberman II, issue #3)
+  - Clock MMC3 IRQ counter (issue #4)
+  - CPU bug in Qix
+  - Initialize RAM to all 1s instead of 0s (Battletoads)
+  - Delay immediate NMI by one instruction (Bomberman II attract mode)
+  - Overall improved timing by delaying interrupts one instruction, though
+    this is still not quite correct.
 
 2020-07-27 - beta 3
   - Add mappers 9, 10 (MMC2, MMC4)
@@ -154,4 +135,4 @@ Git: https://github.com/hcs64/neon64v2
 Forum: https://hcs64.com/mboard/forum.php
 Email: agashlin@gmail.com
 
--hcs 2020-07-27
+-hcs 2022-04-??

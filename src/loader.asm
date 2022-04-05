@@ -9,7 +9,7 @@ include "loader_mem.inc"
 // Pad for checksum
 fill 0x10'1000
 origin 0
-N64_HEADER(NTSC_LOADER, "Neon64 2.0-WIP")
+N64_HEADER(NTSC_LOADER, "Neon64 2.0-beta.4")
 insert "lib/N64_BOOTCODE.BIN"
 
 base NTSC_LOADER

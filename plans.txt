@@ -52,7 +52,6 @@ Desired features:
 
 Desired mappers:
 Easy
-- 34 (Deadly Towers)
 - 66 (SMB+Duck Hunt)
 
 - 111 (homebrew, memblers)
@@ -85,6 +84,8 @@ Known bugs:
   - Wizards & Warriors - status bar
 
 * Timing
+  - Delaying all interrupts by one instruction is not particularly
+    well-motivated, might cause some of these issues below.
   - Rad Racer - lots of lines out of place (mid-line fine X?)
   - Jurassic Park - Ocean logo on the title screen has a few lines out of place, (mid-line fine X? timing?)
   - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset? IRQ timing?)
