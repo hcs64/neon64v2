@@ -66,6 +66,7 @@ New:
   - Mapper 11 (various Color Dreams), thanks to sp1187!
   - Mapper 34 (Deadly Towers), thanks to ddp34!
   - Detect PAL from NES 2.0 header
+  - Unofficial opcodes (Deadly Towers, Aladdin, Streemerz, etc)
 Fixed:
   - Controller detection issues #3 and #5
   - More accurate PCM playback on PAL (e.g. High Hopes demo)

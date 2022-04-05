@@ -7,6 +7,8 @@
 //define LOG_IRQ()
 //define TRAP_BAD_WRITE()
 
+define UNOFFICIAL_OPCODES()
+
 constant flagN(0x80)
 constant flagV(0x40)
 constant flag1(0x20)
@@ -88,6 +90,7 @@ macro get_flags(out_reg, tmp1, tmp2) {
 +
 }
 
+ex_nop:
 FinishCycleAndFetchOpcode:
   daddi cycle_balance, cpu_div
 TestNextCycleAndFetchOpcode:
@@ -507,6 +510,7 @@ scope addr_rw_absx: {
 // Cycle 3: Fetch high byte of address, add X to low, increment PC
   addr_fetch_lh_imm(cpu_t1, cpu_t2)
   addu t1, cpu_t1, cpu_x
+cycle4:
 // Cycle 4: Read from wrong effective address, fix high byte
   andi t0, t1, 0xff
   sll cpu_t2, 2
@@ -1342,6 +1346,368 @@ ex_clv:
   andi cpu_t0, flagV^0xff
   j FinishCycleAndFetchOpcode
   sb cpu_t0, cpu_flags (r0)
+
+if {defined UNOFFICIAL_OPCODES} {
+// Unofficial ops
+// Most of these are based on the FCEUX implementation and
+// tested against blargg's instr_test-v5.
+
+// Addressing modes
+addr_rw_absy:
+  addr_fetch_lh_imm(cpu_t1, cpu_t2)
+  j addr_rw_absx.cycle4
+  addu t1, cpu_t1, cpu_y
+
+addr_rw_ix:
+// Cycle 2: Fetch pointer address, increment PC
+// Cycle 3: Read from address, add X
+// Cycle 4: Fetch effective address low
+// Cycle 5: Fetch effective address high
+  addr_fetch_ix(cpu_t1, cpu_t2)
+
+// Cycle 6: Read from effective address
+  sll cpu_t2, 2
+  lw t0, cpu_read_map (cpu_t2)
+  sll cpu_t2, 8-2
+  or cpu_t1, cpu_t2
+  move cpu_t2, cpu_t1
+
+  bgez t0,+
+  add t1, t0, cpu_t1
+
+// TODO implement for read/write handlers
+  syscall 1
++
+  lbu cpu_t1, 0 (t1)
+
+// Cycle 7: Write the value back to effective address (TODO),
+// do the operation
+
+// Execute
+  jalr cpu_t0
+  move a0, cpu_t1
+
+  daddi cycle_balance, cpu_div * 2
+  bgezal cycle_balance, Scheduler.YieldFromCPU
+  move cpu_t0, a0
+
+// Cycle 8: Write the new value
+  move cpu_t1, cpu_t2
+
+  andi t1, cpu_t1, 0xff00
+  srl t1, 8-2
+  lw t0, cpu_write_map (t1)
+
+  bgez t0,+
+  add t1, t0, cpu_t1
+
+// TODO implement for read/write handlers
+  syscall 1
++
+  j FinishCycleAndFetchOpcode
+  sb cpu_t0, 0 (t1)
+
+addr_rw_iy:
+// Cycle 2: Fetch pointer address, increment PC
+  addr_fetch_imm(cpu_t2)
+
+// Cycle 3: Fetch effective address low (ZP)
+  daddi cycle_balance, cpu_div
+  bgezal cycle_balance, Scheduler.YieldFromCPU
+  lbu cpu_t1, nes_ram (cpu_t2)
+
+// Cycle 4: Fetch effective address high (ZP), add Y to low
+  addi cpu_t2, 1
+  andi cpu_t2, 0xff
+  lbu cpu_t2, nes_ram (cpu_t2)
+
+  daddi cycle_balance, cpu_div
+  bgezal cycle_balance, Scheduler.YieldFromCPU
+  add cpu_t1, cpu_y
+
+// Cycle 5: Read from wrong effective address (TODO)
+  daddi cycle_balance, cpu_div
+  bgezal cycle_balance, Scheduler.YieldFromCPU
+  nop
+
+// Cycle 6: Read from effective address
+  sll cpu_t2, 8
+  add cpu_t2, cpu_t1
+  andi cpu_t2, 0xffff
+  andi t2, cpu_t2, 0xff00
+  srl t2, 8-2
+
+  lw t0, cpu_read_map (t2)
+
+  bgez t0,+
+  add t1, t0, cpu_t2
+
+// TODO implement for read/write handlers
+  syscall 1
++
+  lbu cpu_t1, 0 (t1)
+
+  daddi cycle_balance, cpu_div
+  bgezal cycle_balance, Scheduler.YieldFromCPU
+  nop
+
+// Cycle 7: Write back (TODO), execute
+  jalr cpu_t0
+  move a0, cpu_t1
+
+  daddi cycle_balance, cpu_div
+  bgezal cycle_balance, Scheduler.YieldFromCPU
+  move cpu_t0, a0
+
+// Cycle 8: Write new value
+  move cpu_t1, cpu_t2
+
+  andi t1, cpu_t1, 0xff00
+  srl t1, 8-2
+  lw t0, cpu_write_map (t1)
+
+  bgez t0,+
+  add t1, t0, cpu_t1
+
+// TODO implement for read/write handlers
+  syscall 1
++
+  j FinishCycleAndFetchOpcode
+  sb cpu_t0, 0 (t1)
+
+// SHY aka SYA
+// SHX aka SXA
+addr_w_shxy:
+// Cycle 2: Fetch low address byte, increment PC
+// Cycle 3: Fetch high address byte, increment PC
+  addr_fetch_lh_imm(cpu_t1, cpu_t2)
+
+// Cycle 4: Read from wrong effective address (TODO?)
+// cpu_t0 has X or Y to use for the AND. XOR swap to the other one.
+  xor t0, cpu_x, cpu_y
+  xor t0, cpu_t0
+
+  sll cpu_t2, 8
+  add cpu_t1, cpu_t2
+  add cpu_t1, t0
+
+  daddi cycle_balance, cpu_div
+  bgezal cycle_balance, Scheduler.YieldFromCPU
+  andi cpu_t1, 0xffff // not needed?
+
+// Cycle 5: Write
+  srl t0, cpu_t1, 8
+  addi t0, 1
+  and cpu_t0, t0
+  andi cpu_t1, 0xff
+  move cpu_t2, cpu_t0
+
+  write_abs_no_carry_and_finish(cpu_t0, cpu_t1, cpu_t2)
+
+// R execute
+// ANC aka AAC
+ex_anc:
+  and cpu_acc, cpu_t1
+  srl t0, cpu_acc, 7
+  sb t0, cpu_c_byte (r0)
+finish_acc_r:
+  sb cpu_acc, cpu_n_byte (r0)
+  j FinishCycleAndFetchOpcode
+  sb cpu_acc, cpu_z_byte (r0)
+
+// ALR aka ASR
+ex_alr:
+  and cpu_acc, cpu_t1
+  j ex_lsr_acc
+  andi cpu_t0, cpu_acc, 1
+
+// TODO shorten?
+ex_arr:
+  and cpu_acc, cpu_t1
+
+  lbu t3, cpu_c_byte (r0)
+  srl t0, cpu_acc, 7
+  sb t0, cpu_c_byte (r0)
+  srl t0, cpu_acc, 1
+  sll t3, 7
+
+  lbu t1, cpu_flags (r0)
+  andi t1, flagV^0xff
+  xor t2, t0, cpu_acc
+  andi t2, flagV
+  or t1, t2
+  sb t1, cpu_flags (r0)
+
+  j finish_acc_r
+  or cpu_acc, t0, t3
+
+ex_lax:
+  j ex_ldx
+  move cpu_acc, cpu_t1
+
+ex_axs:
+  and cpu_x, cpu_acc
+  sub cpu_x, cpu_t1
+  sb cpu_x, cpu_n_byte (r0)
+  sb cpu_x, cpu_z_byte (r0)
+  sltiu t0, cpu_x, 0x100
+  sb t0, cpu_c_byte (r0)
+  j FinishCycleAndFetchOpcode
+  andi cpu_x, 0xff
+
+ex_xaa:
+  j finish_acc_r
+  andi cpu_acc, cpu_x, cpu_t1
+
+// LAS aka LAR
+ex_las:
+// TODO untested besides timing
+  and cpu_stack, cpu_t1
+  move cpu_x, cpu_stack
+  j finish_acc_r
+  move cpu_acc, cpu_stack
+
+// RMW execute
+ex_slo:
+  srl t0, a0, 7
+  sb t0, cpu_c_byte (r0)
+  sll a0, 1
+
+  or cpu_acc, a0
+finish_acc_rw:
+  sb cpu_acc, cpu_n_byte (r0)
+  jr ra
+  sb cpu_acc, cpu_z_byte (r0)
+
+ex_rla:
+  lbu t0, cpu_c_byte (r0)
+  sll a0, 1
+  or a0, t0
+  srl t0, a0, 8
+  sb t0, cpu_c_byte (r0)
+
+  j finish_acc_rw
+  and cpu_acc, a0
+
+ex_sre:
+  andi t0, a0, 1
+  srl a0, 1
+  sb t0, cpu_c_byte (r0)
+
+  j finish_acc_rw
+  xor cpu_acc, a0
+
+// TODO I hate to use all this space on RRA,
+// but it's not natural to combine it with ADC since it needs to
+// return through the addressing mode's write handler.
+scope ex_rra: {
+constant flags(t0)
+constant carry(t1)
+constant overflow(t2)
+
+  lbu t0, cpu_c_byte (r0)
+  andi carry, a0, 1
+  srl a0, 1
+  sll t0, 7
+  or a0, t0
+
+  lbu flags, cpu_flags (r0)
+  xor overflow, a0, cpu_acc
+  addu cpu_acc, a0
+  addu cpu_acc, carry
+
+  srl carry, cpu_acc, 8
+  sb carry, cpu_c_byte (r0)
+  andi cpu_acc, 0xff
+
+// overflooooow
+  xori overflow, 0x80
+  xor t3, a0, cpu_acc
+  and overflow, t3
+  andi overflow, 0x80
+  srl overflow, 1 // V = 0x40
+
+  andi flags, flagV^0xff
+  or flags, overflow
+  sb flags, cpu_flags (r0)
+
+  sb cpu_acc, cpu_n_byte (r0)
+  jr ra
+  sb cpu_acc, cpu_z_byte (r0)
+}
+
+
+// ISC aka ISB
+// TODO shrinkme
+scope ex_isc: {
+constant flags(t0)
+constant borrow(t1)
+constant overflow(t2)
+constant result(t3)
+  addi a0, 1
+  andi a0, 0xff
+
+  lbu borrow, cpu_c_byte (r0)
+  lbu flags, cpu_flags (r0)
+  xori borrow, flagC
+  xor overflow, a0, cpu_acc
+  subu result, cpu_acc, a0
+  subu result, borrow
+
+  move borrow, result
+  slti borrow, 0
+  xori borrow, 1
+  sb borrow, cpu_c_byte (r0)
+
+// overflooooow
+// reusing borrow for temp here
+  xor borrow, result, cpu_acc
+  and overflow, borrow
+  andi overflow, 0x80
+  srl overflow, 1 // V = 0x40
+
+  andi flags, flagV^0xff
+  or flags, overflow
+  sb flags, cpu_flags (r0)
+
+  andi cpu_acc, result, 0xff
+
+  sb cpu_acc, cpu_n_byte (r0)
+  jr ra
+  sb cpu_acc, cpu_z_byte (r0)
+}
+
+ex_dcp:
+  addi a0, -1
+  andi a0, 0xff
+
+  sub t1, cpu_acc, a0
+  andi t0, t1, 0xff
+
+  sb t0, cpu_n_byte (r0)
+  sb t0, cpu_z_byte (r0)
+  sltiu t1, 0x100
+  jr ra
+  sb t1, cpu_c_byte (r0)
+
+// W execute
+// These don't interface with the write addressing modes in the normal way
+
+// AHX aka SHA aka AXA
+ex_ahx_iy:
+// TODO, only implemented for a timing test
+  addiu cpu_mpc, 1
+  j TestNextCycleAndFetchOpcode
+  daddiu cycle_balance, cpu_div * 5
+
+ex_ahx_absy:
+// TAS aka SHS
+ex_tas:
+// TODO, only implemented for a timing test
+  addiu cpu_mpc, 2
+  j TestNextCycleAndFetchOpcode
+  daddiu cycle_balance, cpu_div * 4
+}
 
 print "CPU kernel is ", pc() - FinishCycleAndFetchOpcode, " bytes \n"
 

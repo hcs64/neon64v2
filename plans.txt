@@ -39,7 +39,6 @@ Desired features:
 - Zapper
 - Reset, power cycle
 - PAL N64 mode
-- Unofficial CPU opcodes
 - Screenshots
 - Famicom Disk System
 - More mappers
@@ -69,14 +68,10 @@ Known bugs:
 
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud
-  - Some audio glitching in Mega Man 2 intro (check hw?)
+  - Some glitching in Mega Man 2 intro (check hw?)
 
 * Crashes
   - Wally Bear and the No! Gang hangs on boot
-  - Aladdin bad opcode before title screen (needs unofficial SLO)
-  - Deadly Towers game over screen triggers bad opcode $fa after several seconds.
-    Quickly starting a new game can avoid the issue.
-  - Streemerz needs unofficial opcodes
 
 * Mid-frame palette change
   - Bill & Ted - dialog boxes
