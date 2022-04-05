@@ -34,7 +34,7 @@ The CPU executes out of an opcode table, which has two MIPS instructions for all
 
 The CPU address space is mapped by read and write pointers for every 256 byte page. If bit 31 is clear, this is memory, which can be accessed directly through the TLB. If bit 31 is set it points to a side effect handler.
 
-The most common thing the 6502 does is read bytes at the current PC, so PC is a native pointer, in register `cpu_mpc`. It gets converted back (by subtracting `cpu_mpc_base`) as needed. When the PC increments normally, the pointer can just be incremented, unless it passes into another bank. To trap this, after each TLB page there is unmapped guard space. This is rare enough that I've never seen it happen, so I haven't implemented recovery yet; if needed the exception handler could remap PC.
+The most common thing the 6502 does is read bytes at the current PC, so PC is a native pointer, in register `cpu_mpc`. It gets converted back (by subtracting `cpu_mpc_base`) as needed. When the PC increments normally, the pointer can just be incremented, unless it passes into another bank. To trap this, after each TLB page there is unmapped guard space, a TLB miss exception will remap the PC.
 
 The N, Z, and C flags are used somewhat less often than they are set, so I defer updating them; operations that would change then save the relevant value in `cpu_{n,z,c}_byte`. I'm not sure if this is a great idea in its current form, I haven't profiled without it.
 

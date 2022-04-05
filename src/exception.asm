@@ -350,6 +350,46 @@ end:
 }
 
 not_tlb_modification:
+  lli t0, 2 // TLB miss
+  bne t0, k1, not_tlb_miss
+  nop
+
+scope TLBMiss {
+  ls_gp(sd a0, exception_regs + a0*8)
+  ls_gp(sd a1, exception_regs + a1*8)
+  ls_gp(sd ra, exception_regs + ra*8)
+
+// Handle only one special case: remap PC if opcode fetch misses,
+// as it has run off the end of a bank.
+
+// FIXME there are a lot of other places in cpu.asm and opcodes.asm that
+// load from cpu_mpc that should probably be covered, in case an instruction
+// crosses a bank boundary. Probably should just check for an lb/lbu instruction
+// that uses cpu_mpc as base. But I want to wait for a failing example
+// before taking that step.
+
+  dmfc0 t0, EPC
+  la a0, opcode_fetch_lbu
+  bne t0, a0, unhandled_exception
+  nop
+
+  //get_pc(a1)
+  lw a1, cpu_mpc_base (r0)
+  subu a1, cpu_mpc, a1
+  andi a0, a1, 0xff
+  srl a1, 8
+  jal SetPC
+  andi a1, 0xff
+
+  ls_gp(ld t0, exception_regs + t0*8)
+  ls_gp(ld a0, exception_regs + a0*8)
+  ls_gp(ld a1, exception_regs + a1*8)
+  ls_gp(ld ra, exception_regs + ra*8)
+
+  eret
+}
+
+not_tlb_miss:
   lli t0, 8 // syscall
   bne t0, k1, not_syscall
   nop

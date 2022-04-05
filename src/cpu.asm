@@ -45,6 +45,7 @@ end_low_page()
 
 // a0 = new PC low byte
 // a1 = new PC high byte
+// Must not touch any other regs as this is used in TLBMiss.
 SetPC:
   sll a1, 2
   lw cpu_mpc, cpu_read_map (a1)
@@ -97,6 +98,7 @@ FetchOpcode:
 // Cycle 1: Fetch opcode, increment PC
 
   lhu t1, interrupt_pending (r0)
+opcode_fetch_lbu:
   lbu cpu_t0, 0 (cpu_mpc)
 
   bnez t1, TakeInt
