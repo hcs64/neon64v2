@@ -11,7 +11,7 @@ Features
 - PPU
 - APU channels (2 square, triangle, noise, DMC)
 - Battery backed RAM save to SRAM
-- iNES mappers #s 0,1,2,3,4,7,9,10,11,30,31,34,71
+- iNES mappers #s 0,1,2,3,4,7,9,10,11,30,31,34,66,71
 - Controllers 1 and 2  (D-pad + analog)
 
 There's a lot missing, but it's already worlds better than 1.2.
@@ -60,11 +60,12 @@ savestates are not yet supported.
 Version history
 ---------------
 
-2022-04-?? - beta 4
+2022-04-06 - beta 4
 New:
   - Controller 2!
   - Mapper 11 (various Color Dreams), thanks to sp1187!
   - Mapper 34 (Deadly Towers), thanks to ddp34!
+  - Mapper 66 (Doraemon, etc)
   - Detect PAL from NES 2.0 header
   - Unofficial opcodes (Deadly Towers, Aladdin, Streemerz, etc)
 Fixed:
@@ -78,6 +79,7 @@ Fixed:
   - Delay immediate NMI by one instruction (Bomberman II attract mode)
   - Overall improved timing by delaying interrupts one instruction, though
     this is still not quite correct.
+  - Remap PC when leaving a bank (Deadly Towers)
 
 2020-07-27 - beta 3
   - Add mappers 9, 10 (MMC2, MMC4)
@@ -137,4 +139,4 @@ Git: https://github.com/hcs64/neon64v2
 Forum: https://hcs64.com/mboard/forum.php
 Email: agashlin@gmail.com
 
--hcs 2022-04-??
+-hcs 2022-04-06
