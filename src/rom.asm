@@ -39,6 +39,8 @@ begin_overlay(31)
 include "mappers/mapper31.asm"
 begin_overlay(34)
 include "mappers/mapper34.asm"
+begin_overlay(66)
+include "mappers/mapper66.asm"
 begin_overlay(71)
 include "mappers/mapper71.asm"
 end_overlay_region()
@@ -263,6 +265,7 @@ not_mmc1:
   j Mapper34.Init
   la_gp(ra, mapper_ok)
 +
+  consider_mapper(66)
   consider_mapper(71)
 // HACK pretend 206 is 4
   lli t2, 206

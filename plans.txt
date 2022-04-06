@@ -49,8 +49,6 @@ Desired features:
 - Some NES 2.0 support? (submapper, CHRRAM size, etc)
 
 Desired mappers:
-Easy
-- 66 (SMB+Duck Hunt)
 
 - 111 (homebrew, memblers)
 
