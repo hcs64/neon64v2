@@ -13,8 +13,6 @@ Init:
   bnez t0,-
   addi t0, -1
 
-  ls_gp(sh r0, mapper9_latch0)
-
 // 0x8000, 8K
   jal TLB.AllocateVaddr
   lli a0, 0x4000  // align 16K
@@ -80,7 +78,7 @@ Init:
   lli cpu_t1, 0xa000
 
   jal Latch0
-  lli t0, 0x0fd0
+  lli t4, 0x0fd0
 
   jal Latch1
   lli t0, 0xfd
@@ -144,11 +142,16 @@ chrrom_fe_1:
   nop
 
 Latch0:
-// t0: Matching pattern addr, -8
+// t4: Matching pattern addr, -8
+  addi sp, 16
+  sw t3, -4 (sp)
+  sw t2, -8 (sp)
+  sw t1, -12 (sp)
+
   ls_gp(lw t1, chrrom_start)
 
   lli t2, 0x0fd0
-  beq t0, t2,+
+  beq t4, t2,+
   ls_gp(lbu t2, mapper9_regs + 1)
   ls_gp(lbu t2, mapper9_regs + 2)
 +
@@ -160,8 +163,13 @@ Latch0:
   sw t2, ppu_map + 0*4 (r0)
   sw t2, ppu_map + 1*4 (r0)
   sw t2, ppu_map + 2*4 (r0)
-  jr ra
   sw t2, ppu_map + 3*4 (r0)
+
+  lw t3, -4 (sp)
+  lw t2, -8 (sp)
+  lw t1, -12 (sp)
+  jr ra
+  addi sp, -16
 
 Latch1:
 // t0: The tile idx
@@ -187,8 +195,6 @@ Latch1:
 
 begin_bss()
 mapper9_prgrom_vaddr:; dw 0,0,0
-
-mapper9_latch0:; dh 0
 
 mapper9_regs:; fill 6
 mapper9_prgrom_tlb_idx:; db 0,0,0

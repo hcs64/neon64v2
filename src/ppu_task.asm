@@ -367,7 +367,8 @@ if {defined PPU_MMC2} {
   bne t4, t8,++
   nop
 +
-  ls_gp(sh t4, mapper9_latch0)
+  jal Mapper9.Latch0
+  nop
 +
 }
   srl t8, t4, 10
@@ -499,10 +500,6 @@ sprite_fetch_done:
   bgezal cycle_balance, Scheduler.Yield
   nop
 
-if {defined PPU_MMC2} {
-  jal Mapper9.Latch0
-  ls_gp(lhu t0, mapper9_latch0)
-}
 if {defined PPU_MMC4} {
   ls_gp(lbu t0, mapper10_latch + 0)
   jal Mapper10.Latch

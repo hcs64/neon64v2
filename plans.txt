@@ -62,7 +62,6 @@ Desired mappers:
 
 Known bugs:
 * Profiling is wonky in PAL mode
-* Mike Tyson's Punch Out - A line is out of place on the first screen (MMC2 logic?)
 
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud
