@@ -128,6 +128,16 @@ if {defined LOG_MMC3} {
   addi sp, -8
 }
 
+  lw t1, ppu_catchup_cb (r0)
+  // delay slot?
+  beqz t1,+
+  nop // delay slot?
+  sw ra, cpu_rw_handler_ra (r0)
+  jalr t1
+  nop
+  lw ra, cpu_rw_handler_ra (r0)
++
+
   andi t0, cpu_t1, 0b0110'0000'0000'0000
   andi t1, cpu_t1, 1
   srl t0, 13-1

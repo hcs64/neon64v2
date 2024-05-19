@@ -82,4 +82,3 @@ Known bugs:
   - Battletoads - Flicker at bottom of status bar
   - Rad Racer - Flicker at top of status bar
   - Big Nose Freaks Out - "Select Game Type" screen bounce
-  - Kirby - Flicker on edge of status bar on overworld screens
