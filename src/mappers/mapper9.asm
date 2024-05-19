@@ -135,6 +135,13 @@ mirroring:
 
 chrrom_fd_0:
 chrrom_fe_0:
+// TODO PPU catchup?
+
+// Tail call
+  ls_gp(lhu t4, mapper9_latch0)
+  j Latch0
+  nop
+
 chrrom_fd_1:
 chrrom_fe_1:
 // TODO PPU catchup?
@@ -143,6 +150,7 @@ chrrom_fe_1:
 
 Latch0:
 // t4: Matching pattern addr, -8
+  ls_gp(sh t4, mapper9_latch0)
   addi sp, 16
   sw t3, -4 (sp)
   sw t2, -8 (sp)
@@ -195,6 +203,8 @@ Latch1:
 
 begin_bss()
 mapper9_prgrom_vaddr:; dw 0,0,0
+
+mapper9_latch0:; dh 0
 
 mapper9_regs:; fill 6
 mapper9_prgrom_tlb_idx:; db 0,0,0
