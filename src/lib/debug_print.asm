@@ -194,12 +194,12 @@ scope FlushDebug: {
   move  count, in_len
 
 loop:
-  ld    word, 0(in)
-  sd    word, ISV_DBG_BUF(out)
-  addi  count, -8
-  addi  out, 8
+  lw    word, 0(in)
+  sw    word, ISV_DBG_BUF(out)
+  addi  count, -4
+  addi  out, 4
   bgtz  count, loop
-  addi  in, 8
+  addi  in, 4
 
   lui   out, ISV_BASE
   jr ra
