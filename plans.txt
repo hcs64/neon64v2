@@ -84,7 +84,3 @@ Known bugs:
   - Battletoads - Flicker at bottom of status bar
   - Big Nose Freaks Out - "Select Game Type" screen bounce
   - Kirby - Flicker on edge of status bar on overworld screens
-
-* MMC1
-  - Nobunaga's Ambition title screen and in-game are messed up (MMC1 board variant)
-  - Rad Racer Game Over map is corrupt (MMC1 board variant?)
