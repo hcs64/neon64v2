@@ -33,6 +33,7 @@ odd_frame:;   db 0
 oam_addr:;    db 0
 are_sprites_evaled:;  db 0
 sp0_this_line:; db 0
+chosen_fine_x_scroll:; db 0
 
 align(4)
 

@@ -673,7 +673,19 @@ FetchBG:
   ld t8, target_cycle (r0)
   ls_gp(ld t0, ppu_catchup_current_cycle)
   dadd t8, cycle_balance
-  dsub t8, t0, t8
+
+// A hack to compensate for mid-line fine X scroll change:
+// If fetch is starting early enough in the line, use the current
+// fine x scroll for the whole line. The threshold is roughly the
+// midpoint, to prefer the scroll for the majority of the line.
+// Only using the scroll at the end glitches in Rad Racer, but
+// only using the scroll at the start glitches in Mach Rider.
+  lbu t1, ppu_fine_x_scroll (r0)
+  subi t2, ppu_t2, bg_fetch_tiles / 2
+  bltz t2,+
+  dsub t8, t0, t8 // finish t8 setup
+  sb t1, chosen_fine_x_scroll (r0)
++
 
 // t9: Initial tiles left, to count tiles completed in each run
   move t9, ppu_t2
@@ -876,7 +888,7 @@ if {defined PPU_MMC4} {
 // Store per-line values, cached for now
   lbu t0, cur_scanline (r0)
 
-  lbu t2, ppu_fine_x_scroll (r0)
+  lbu t2, chosen_fine_x_scroll (r0)
   andi t1, t0, 0b111
   sb t2, ppu_bg_x_lines (t1)
 
