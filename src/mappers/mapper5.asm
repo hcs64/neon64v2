@@ -78,7 +78,7 @@ Init:
   lli cpu_t0, 0xff
 
 // Initial BG CHR setup
-  la_gp(t0, chrrom_start)
+  ls_gp(lw t0, chrrom_start)
   ls_gp(sw t0, mmc5_pattern_map + 0*4)
   ls_gp(sw t0, mmc5_pattern_map + 1*4)
   ls_gp(sw t0, mmc5_pattern_map + 2*4)
