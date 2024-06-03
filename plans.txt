@@ -52,7 +52,7 @@ Desired mappers:
 
 - 111 (homebrew, memblers)
 
-- 5 (MMC5, Castlevania 3, etc)
+- 5 (MMC5 beyond Castlevania 3, e.g. Uncharted Waters, SimCity)
 - 19 (Namco 129/163, Pac-Man Championship Edition, etc)
 - 24 (VRC6a, Akumajou Densetsu)
 - 25 (VRC6b, Madara etc)
@@ -81,4 +81,5 @@ Known bugs:
   - Battletoads - Small screen bounce as the walkers phase in
   - Battletoads - Flicker at bottom of status bar
   - Rad Racer - Flicker at top of status bar
+  - Castlevania 3 - Wrong line at bottom of status bar
   - Big Nose Freaks Out - "Select Game Type" screen bounce

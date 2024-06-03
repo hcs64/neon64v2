@@ -111,6 +111,12 @@ define PPU_MMC4()
 include "ppu_task.asm"
 }
 
+begin_overlay(mmc5)
+scope ppu_mmc5 {
+define PPU_MMC5()
+include "ppu_task.asm"
+}
+
 end_overlay_region()
 
 scope PPU {

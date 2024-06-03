@@ -20,7 +20,7 @@ constant flagC(0x01)
 
 // pending interrupts
 constant intAPUFrame(0x01)
-constant intMMC3(0x02)
+constant intMapper(0x02)
 constant intDMC(0x04)
 constant intDelayed(0x80)
 

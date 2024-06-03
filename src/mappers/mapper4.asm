@@ -156,7 +156,7 @@ ScanlineCounter:
   ls_gp(lbu t1, mmc3_irq_enabled)
   lbu t0, irq_pending (r0)
   beqz t1,+
-  ori t0, intMMC3 
+  ori t0, intMapper
   sb t0, irq_pending (r0)
 +
   jr ra
@@ -473,7 +473,7 @@ MMC3IRQDisable:
 // Disable IRQ and clear interrupt
   lbu t0, irq_pending (r0)
   ls_gp(sb r0, mmc3_irq_enabled)
-  andi t0, 0xff^intMMC3
+  andi t0, 0xff^intMapper
   jr ra
   sb t0, irq_pending (r0)
 

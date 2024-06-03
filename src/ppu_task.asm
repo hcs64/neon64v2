@@ -514,6 +514,13 @@ if {defined PPU_MMC4} {
 // TODO This really belongs at the start of visible pixels
   daddi cycle_balance, bg_dummy_nt_pixels * ppu_div
 
+if {defined PPU_MMC5} {
+// TODO: Determine how to sync this with the CPU
+
+  jal Mapper5.ScanlineCounter
+  nop
+}
+
 if 1 != 1 {
   lbu t0, ppu_mask (r0)
   andi t0, 0b0000'1000
@@ -547,7 +554,6 @@ if 1 != 1 {
 }
 
 bg_render_enabled:
-
 // Set up the fetch loop
 
 // ppu_t0: Pattern shift reg (if gez this shift will fill the reg)
@@ -621,7 +627,12 @@ macro nt_at_fetch(bg_cycle_balance, nt_addr, pt_base, at_byte, nt_shift, at_shif
   add t3, {pt_base}
   srl t1, t3, 10
   sll t1, 2
+if {defined PPU_MMC5} {
+  add t1, gp
+  lw t1, mmc5_pattern_map - gp_base (t1)
+} else {
   lw t1, ppu_map (t1)
+}
   dsll t2, {nt_shift}, 16
   add t1, t3, t1
   lbu t3, 0 (t1)
@@ -1021,6 +1032,12 @@ if {defined DUMP_VRAM} {
 // post-render scanline (before NMI)
 // This includes the prefetch which would have been the end of line 239.
   daddi cycle_balance, (hblank_pixels + scanline_pixels + vblank_delay) * ppu_div
+
+if {defined PPU_MMC5} {
+// TODO: also when disabled mid-frame?
+  jal Mapper5.ClearInFrameAndIRQ
+  nop
+}
 
 // vblank scanlines
   bgezal cycle_balance, Scheduler.Yield
