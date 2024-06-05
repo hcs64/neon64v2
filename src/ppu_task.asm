@@ -515,10 +515,10 @@ if {defined PPU_MMC4} {
   daddi cycle_balance, bg_dummy_nt_pixels * ppu_div
 
 if {defined PPU_MMC5} {
-// TODO: Determine how to sync this with the CPU
-
-  jal Mapper5.ScanlineCounter
-  nop
+  lli a0, 32 * ppu_div
+  la_gp(a1, Mapper5.ScanlineCounter)
+  jal Scheduler.ScheduleTaskFromNow
+  lli a2, mapper_irq_task
 }
 
 if 1 != 1 {

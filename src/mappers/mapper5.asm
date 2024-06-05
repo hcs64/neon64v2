@@ -419,7 +419,7 @@ ScanlineCounter:
   ls_gp(lbu t2, mmc5_irq_enabled)
 
 // rendering disabled, clear in-frame
-  jr ra
+  j Scheduler.FinishTask
   ls_gp(sb r0, mmc5_in_frame)
 +
 
@@ -433,7 +433,7 @@ ScanlineCounter:
   ls_gp(sb t0, mmc5_in_frame)
   andi t1, 0xff^intMapper
   sb t1, irq_pending (r0)
-  jr ra
+  j Scheduler.FinishTask
   ls_gp(sb r0, mmc5_cur_scanline)
 +
 
@@ -448,7 +448,7 @@ ScanlineCounter:
   sb t0, irq_pending (r0)
 +
 
-  jr ra
+  j Scheduler.FinishTask
   nop
 
 ClearInFrameAndIRQ:

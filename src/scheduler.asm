@@ -5,9 +5,10 @@ constant cpu_inst_task(0)
 constant ppu_task(1)
 constant apu_frame_task(2)
 constant apu_dmc_task(3)
-constant int_cb_task(4)
+constant mapper_irq_task(4)
+constant int_cb_task(5)
 
-constant num_tasks(5)
+constant num_tasks(6)
 
 begin_low_page()
 align(8)
