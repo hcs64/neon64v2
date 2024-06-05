@@ -21,6 +21,11 @@ dmc_cycle_table:
   dh   18240,  15360,  13632,  12288,  10176,   8064,   6912,   5184
 
 
+macro cpu_mul(reg, tmp) {
+  sll {tmp}, {reg}, 3
+  sll {reg}, 2
+  add {reg}, {tmp}
+}
 macro ppu_mul(reg, tmp) {
   sll {reg}, 2
   nop // pad to equal size to make swapping easier
@@ -46,6 +51,11 @@ dmc_cycle_table:
   dh   50944,  45312,  40448,  38144,  35328,  30208,  26880,  25344
   dh   22528,  18944,  16896,  15104,  12544,   9984,   8448,   6400
   
+macro cpu_mul(reg, tmp) {
+  sll {reg}, 4
+  nop // pad to equal size to make swapping easier
+  nop
+}
 macro ppu_mul(reg, tmp) {
   sll {tmp}, {reg}, 2
   add {reg}, {tmp}

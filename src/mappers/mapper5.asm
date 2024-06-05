@@ -128,7 +128,7 @@ if {defined LOG_MMC5} {
   lli t1, 0x5117
   beq cpu_t1, t1, PRG_Mode23_E
   nop
-  j Write51Common
+  j Write51Common // tail call
   nop
 
 Write51Mode3:

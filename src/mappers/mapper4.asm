@@ -402,8 +402,8 @@ if {defined LOG_MMC3} {
   lw ra, -16(sp)
   addi sp, -16
 }
-  ls_gp(lwu t1, prgrom_mask)
   ls_gp(lbu t3, mmc3_prgrom_tlb_index)
+  ls_gp(lwu t1, prgrom_mask)
   add t3, a0
   ls_gp(lw t0, mmc3_prgrom_vaddr)
   sll t2, cpu_t0, mmc3_prgrom_page_shift

@@ -35,6 +35,8 @@ begin_overlay(10)
 include "mappers/mapper10.asm"
 begin_overlay(11)
 include "mappers/mapper11.asm"
+begin_overlay(19)
+include "mappers/mapper19.asm"
 begin_overlay(30)
 include "mappers/mapper30.asm"
 begin_overlay(31)
@@ -254,6 +256,7 @@ not_mmc1:
   consider_mapper(9)
   consider_mapper(10)
   consider_mapper(11)
+  consider_mapper(19)
   consider_mapper(30)
   consider_mapper(31)
 // consider mapper 34 only with zero CHR ROM pages (BNROM)

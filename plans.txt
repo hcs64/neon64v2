@@ -53,7 +53,6 @@ Desired mappers:
 - 111 (homebrew, memblers)
 
 - 5 (MMC5 beyond Castlevania 3, e.g. Uncharted Waters, SimCity)
-- 19 (Namco 129/163, Pac-Man Championship Edition, etc)
 - 24 (VRC6a, Akumajou Densetsu)
 - 25 (VRC6b, Madara etc)
 - 64 (Tengen Rambo-1)
@@ -66,6 +65,7 @@ Known bugs:
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud
   - Some glitching in Mega Man 2 intro (check hw?)
+  - No Namco 163 extra channels
 
 * Crashes
   - Wally Bear and the No! Gang hangs on boot
