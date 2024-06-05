@@ -4,17 +4,17 @@
 
 constant mmc5_mode_3_chrrom_page_shift(10) // 1K
 
-// A minimal implementation for Castlevania 3 (ELROM)
-// - PRG mode 2
+// A minimal implementation:
+// - PRG mode 2 and 3
 // - no WRAM
 // - CHR mode 3
+// - no extended attributes
+// - no sound
 
 scope Mapper5: {
 Init:
   addi sp, 8
   sw ra, -8 (sp)
-
-// TODO ensure no WRAM?
 
 // Init vars
   ls_gp(sd r0, mmc5_chr_5120_7)
@@ -60,7 +60,7 @@ Init:
 
 // Map config register page
 // TODO 0x50
-  la_gp(t1, Write51)
+  la_gp(t1, Write51Mode3)
   sw t1, cpu_write_map + 0x51 * 4 (r0)
   la_gp(t1, Write52)
   sw t1, cpu_write_map + 0x52 * 4 (r0)
@@ -68,13 +68,7 @@ Init:
   sw t1, cpu_read_map + 0x52 * 4 (r0)
 
 // Initial PRG setup
-  jal PRG_Mode2_8_A
-  lli cpu_t0, 0
-
-  jal PRG_Mode2_C
-  lli cpu_t0, 0
-
-  jal PRG_Mode2_E
+  jal PRG_Mode23_E
   lli cpu_t0, 0xff
 
 // Initial BG CHR setup
@@ -96,13 +90,48 @@ Init:
   jal Scheduler.ScheduleTaskFromNow
   lli a2, ppu_task
 
-// TODO IRQ hook
-
   lw ra, -8 (sp)
   jr ra
   addi sp, -8
 
-Write51:
+Write51Mode2:
+if {defined LOG_MMC5} {
+  addi sp, 8
+  sw ra, -8(sp)
+
+  jal PrintStr0
+  la_gp(a0, mmc5_msg)
+
+  move a0, cpu_t0
+  jal PrintHex
+  lli a1, 2
+
+  jal PrintStr0
+  la_gp(a0, mmc5_arrow_msg)
+
+  move a0, cpu_t1
+  jal PrintHex
+  lli a1, 4
+
+  jal NewlineAndFlushDebug
+  nop
+
+  lw ra, -8(sp)
+  addi sp, -8
+}
+  lli t1, 0x5113
+  beq cpu_t1, t1, PRG_Mode23_6
+  lli t1, 0x5115
+  beq cpu_t1, t1, PRG_Mode2_8_A
+  lli t1, 0x5116
+  beq cpu_t1, t1, PRG_Mode23_C
+  lli t1, 0x5117
+  beq cpu_t1, t1, PRG_Mode23_E
+  nop
+  j Write51Common
+  nop
+
+Write51Mode3:
 // cpu_t0: value
 // cpu_t1: address
 if {defined LOG_MMC5} {
@@ -130,13 +159,18 @@ if {defined LOG_MMC5} {
   addi sp, -8
 }
   lli t1, 0x5113
-  beq cpu_t1, t1, PRG_Mode2_6
+  beq cpu_t1, t1, PRG_Mode23_6
+  lli t1, 0x5114
+  beq cpu_t1, t1, PRG_Mode3_8
   lli t1, 0x5115
-  beq cpu_t1, t1, PRG_Mode2_8_A
+  beq cpu_t1, t1, PRG_Mode3_A
   lli t1, 0x5116
-  beq cpu_t1, t1, PRG_Mode2_C
+  beq cpu_t1, t1, PRG_Mode23_C
   lli t1, 0x5117
-  beq cpu_t1, t1, PRG_Mode2_E
+  beq cpu_t1, t1, PRG_Mode23_E
+  nop
+
+Write51Common:
   subi a0, cpu_t1, 0x5120
   bltz a0,+
   subi t1, cpu_t1, 0x5128
@@ -159,21 +193,30 @@ if {defined LOG_MMC5} {
 PRG_Mode:
   andi t0, cpu_t0, 0b11
   lli t1, 2
-  beq t0,t1,+
+  beq t0,t1,PRG_Switch_Mode2
+  lli t1, 3
+  beq t0,t1,PRG_Switch_Mode3
   nop
 
   jal PrintStr0
   la_gp(a0, mmc5_unimplemented_prg_msg)
 
+  jal PrintDec
   andi a0, cpu_t0, 0b11
-  jal PrintHex
-  lli a1, 1
 
   j DisplayDebugAndHalt
   nop
-+
+
+PRG_Switch_Mode2:
+  la_gp(t1, Write51Mode2)
+// TODO remap existing banks?
   jr ra
-  nop
+  sw t1, cpu_write_map + 0x51 * 4 (r0)
+PRG_Switch_Mode3:
+// TODO remap existing banks?
+  la_gp(t1, Write51Mode3)
+  jr ra
+  sw t1, cpu_write_map + 0x51 * 4 (r0)
 
 CHR_Mode:
   andi t0, cpu_t0, 0b11
@@ -233,7 +276,8 @@ Nametable:
   jr ra
   nop
 
-PRG_Mode2_6:
+PRG_Mode23_6:
+// TODO
   jr ra
   nop
 
@@ -252,12 +296,22 @@ PRG_Mode2_8_A:
   j MMC5Set8KPRGBank // tail call
   lli a0, 1
 
-PRG_Mode2_C:
+PRG_Mode3_8:
+  move a1, cpu_t0
+  j MMC5Set8KPRGBank // tail call
+  lli a0, 0
+
+PRG_Mode3_A:
+  move a1, cpu_t0
+  j MMC5Set8KPRGBank // tail call
+  lli a0, 1
+
+PRG_Mode23_C:
   move a1, cpu_t0
   j MMC5Set8KPRGBank // tail call
   lli a0, 2
 
-PRG_Mode2_E:
+PRG_Mode23_E:
   move a1, cpu_t0
   j MMC5Set8KPRGBank // tail call
   lli a0, 3
