@@ -301,12 +301,28 @@ if {MMC1_VARIANT} == MMC1_SUROM {
 // Take action depending on address bits 14,13
   srl t2, cpu_t1, 13
   andi t2, 0b11
+  add t3, t2, gp
+  andi t0, 0b1'1111
+
+  lw t1, ppu_catchup_cb (r0)
+  lli t4, 3
+  beqz t1,+
+  sb t0, {MMC1_VARIANT}_regs - gp_base (t3)
+// Writes to regs besides 3 (0xe000, PRG bank) have the potential to affect rendering
+  beq t3, t4,+
+  nop
+  jalr t1
+  nop
+// restore
+  srl t2, cpu_t1, 13
+  andi t2, 0b11
+  add t3, t2, gp
+  lbu t0, {MMC1_VARIANT}_regs - gp_base (t3)
++
+
   sll t1, t2, 2
   add t1, gp
-  add t2, gp
   lw t3, {MMC1_VARIANT}_write_reg_jump_table - gp_base (t1)
-  andi t0, 0b1'1111
-  sb t0, {MMC1_VARIANT}_regs - gp_base (t2)
   jr t3
   la_gp(ra, done)
 

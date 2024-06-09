@@ -80,5 +80,4 @@ Known bugs:
   - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset? IRQ timing?)
   - Battletoads - Small screen bounce as the walkers phase in
   - Battletoads - Flicker at bottom of status bar
-  - Rad Racer - Flicker at top of status bar
   - Big Nose Freaks Out - "Select Game Type" screen bounce
