@@ -309,7 +309,7 @@ if {MMC1_VARIANT} == MMC1_SUROM {
   beqz t1,+
   sb t0, {MMC1_VARIANT}_regs - gp_base (t3)
 // Writes to regs besides 3 (0xe000, PRG bank) have the potential to affect rendering
-  beq t3, t4,+
+  beq t2, t4,+
   nop
   jalr t1
   nop
