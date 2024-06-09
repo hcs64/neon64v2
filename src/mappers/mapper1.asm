@@ -243,10 +243,13 @@ Write:
   beqz t1, not_reset
   andi t2, t0, 1
 
-// High bit set, just reset shift register
-  lli t0, 0b1'0000
-  j done
-  ls_gp(sb t0, {MMC1_VARIANT}_shift)
+// High bit set, reset shift and PRG mode
+  ls_gp(lbu t0, {MMC1_VARIANT}_regs+0)
+  lli t1, 0b1'0000
+  ori t0, 0b0'1100
+  ls_gp(sb t0, {MMC1_VARIANT}_regs+0)
+  j update_ctrl
+  ls_gp(sb t1, {MMC1_VARIANT}_shift)
 
 not_reset:
   andi t1, cpu_t0, 1
