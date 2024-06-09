@@ -171,6 +171,21 @@ if {defined LOG_MMC5} {
   nop
 
 Write51Common:
+  lli t1, 0x5100
+  beq cpu_t1, t1, PRG_Mode
+  nop
+
+// The rest of these registers affect rendering, catchup the PPU
+  lw t1, ppu_catchup_cb (r0)
+  // delay slot?
+  beqz t1,+
+  nop // delay slot?
+  sw ra, cpu_rw_handler_ra (r0)
+  jalr t1
+  nop
+  lw ra, cpu_rw_handler_ra (r0)
++
+
   subi a0, cpu_t1, 0x5120
   bltz a0,+
   subi t1, cpu_t1, 0x5128
@@ -182,8 +197,6 @@ Write51Common:
   beq cpu_t1, t1, Nametable
   lli t1, 0x5101
   beq cpu_t1, t1, CHR_Mode
-  lli t1, 0x5100
-  beq cpu_t1, t1, PRG_Mode
   nop
 
 // unimplemented, syscall?

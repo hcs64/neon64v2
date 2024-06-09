@@ -515,7 +515,7 @@ if {defined PPU_MMC4} {
   daddi cycle_balance, bg_dummy_nt_pixels * ppu_div
 
 if {defined PPU_MMC5} {
-  lli a0, 32 * ppu_div
+  lli a0, (bg_prefetch_pixels + 4) * ppu_div
   la_gp(a1, Mapper5.ScanlineCounter)
   jal Scheduler.ScheduleTaskFromNow
   lli a2, mapper_irq_task
