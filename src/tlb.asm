@@ -111,7 +111,18 @@ AllocateVaddr:
 
 // TODO should interrupts be masked while updating mappings so the cop0 regs don't get mussed?
 
-// All args will be preserved in TLBMap*
+// All args will be preserved in Map*
+
+// Note: The Map* routines protect a caller's load/store from a potential TLB
+// hazard with tlbwi. This requires 8 - (4+1) = 3 instructions before the next
+// load/store TLB use. Experimentally just using `tlbwi; jr ra; nop` is
+// sufficient, but for safety, and because this is hell to debug when it comes
+// up, a full 3 instructions are interposed here: `tlbwi; nop; jr ra; nop`
+//
+// WARNING: 5 instructions are needed before an instruction fetch can use the
+// TLB, so it will not be safe to return from Map* to e.g. TLB index 1 or 2
+// (mapped above). This isn't an issue yet because the TLB is not used for MIPS
+// instructions.
 
 // Maps one 4K page, only first half of pair is used
 // Index: TLB entry index
@@ -127,14 +138,17 @@ Map4K:
 // High page of pair, invalid global
   lli t0, (1 << 0)
   mtc0 t0, EntryLo1
-  jr ra // tlbwi hazard with mtc0 EntryLo1
+  nop   // tlbwi hazard with mtc0 EntryLo1
   tlbwi
+  nop   // Load/Store hazard 1
+  jr ra // " 2
+  nop   // " 3
 
 // Maps two 4K pages
 // Index: TLB entry index
 // a0: virtual address (8K aligned)
 // a1: physical address 0 (4K aligned)
-// a2: physical address 1 (for TLBMap4K_2, 4K aligned)
+// a2: physical address 1 (for Map4K_2, 4K aligned)
 Map8K:
   addi a2, a1, 0x1000
 Map4K_2:
@@ -148,8 +162,11 @@ Map4K_2:
   srl t0, a2, 12-6
   ori t0, (%011 << 3) | (1 << 2) | (1 << 1) | (1 << 0)
   mtc0 t0, EntryLo1
-  jr ra // tlbwi hazard with mtc0 EntryLo1
+  nop   // tlbwi hazard with mtc0 EntryLo1
   tlbwi
+  nop   // Load/Store hazard 1
+  jr ra // " 2
+  nop   // " 3
 
 // Maps one 16K page, only first half of pair is used
 // a0: virtual address (32K aligned)
@@ -166,13 +183,16 @@ Map16K:
 // High page of pair, invalid global
   lli t0, (1 << 0)
   mtc0 t0, EntryLo1
-  jr ra // tlbwi hazard with mtc0 EntryLo1
+  nop   // tlbwi hazard with mtc0 EntryLo1
   tlbwi
+  nop   // Load/Store hazard 1
+  jr ra // " 2
+  nop   // " 3
 
 // Map two 16K pages
 // a0: virtual address (32K aligned)
 // a1: physical address 0 (4K aligned?)
-// a2: physical address 1 (for TLBMap16K_2, 4K aligned?)
+// a2: physical address 1 (for Map16K_2, 4K aligned?)
 // Index: TLB entry index
 Map32K:
   addi a2, a1, 0x4000
@@ -188,8 +208,12 @@ Map16K_2:
   srl t0, a2, 12-6
   ori t0, (%011 << 3) | (1 << 2) | (1 << 1) | (1 << 0)
   mtc0 t0, EntryLo1
-  jr ra // tlbwi hazard with mtc0 EntryLo1
+  nop   // tlbwi hazard with mtc0 EntryLo1
   tlbwi
+  nop   // Load/Store hazard 1
+  jr ra // " 2
+  nop   // " 3
+
 }
 
 begin_bss()
