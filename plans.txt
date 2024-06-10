@@ -80,4 +80,6 @@ Known bugs:
   - DPCM Letterbox - First line is scrolled wrong (need separate Y inc and X reset? IRQ timing?)
   - Battletoads - Small screen bounce as the walkers phase in
   - Battletoads - Flicker at bottom of status bar
+  - Wizards & Warriors III - Wrong line on title screen
+  - Wizards & Warriors III - Screen split bounce at intro castle scene
   - Big Nose Freaks Out - "Select Game Type" screen bounce
