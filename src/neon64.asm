@@ -176,7 +176,7 @@ PrintHeaderInfo:
   lli a1, 20
 
   jal PrintStr0
-  la_gp(a0, crc_message)
+  la_gp(a0, checksum_message)
 
   ls_gp(lw a0, n64_header + 0x10)
   jal PrintHex
@@ -280,8 +280,8 @@ insert "lib/rdpfont.bin"
 startup_message:
   db "Welcome to Neon64!\n",0
 
-crc_message:
-  db "\nCRC ",0
+checksum_message:
+  db "\nSums ",0
 
 copyright_message:
   db "\n\n"
