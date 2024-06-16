@@ -126,8 +126,8 @@ Init:
   lli cpu_t0, 0
 
 // Last PRG bank (0xe000-0x1'0000) is hardwired to last bank
-  ls_gp(lw a0, prgrom_page_count)
-  sll cpu_t0, prgrom_page_shift - mmc3_prgrom_page_shift // 16K pages to 8K pages
+  ls_gp(lbu a0, prgrom_page_count)
+  sll cpu_t0, a0, prgrom_page_shift - mmc3_prgrom_page_shift // 16K pages to 8K pages
   lli a0, 3
   jal MMC3SetPRGBank
   addi cpu_t0, -1
