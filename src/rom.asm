@@ -26,6 +26,7 @@ include "mappers/mapper3.asm"
 
 constant MMC3_base(1)
 constant MMC3_TQROM(2)
+constant MMC3_TxSROM(3)
 
 define MMC3_VARIANT(MMC3_base)
 begin_overlay(4_base)
@@ -33,6 +34,10 @@ include "mappers/mapper4.asm"
 
 define MMC3_VARIANT(MMC3_TQROM)
 begin_overlay(4_tqrom)
+include "mappers/mapper4.asm"
+
+define MMC3_VARIANT(MMC3_TxSROM)
+begin_overlay(4_txsrom)
 include "mappers/mapper4.asm"
 
 begin_overlay(5)
@@ -291,6 +296,13 @@ not_mmc3_base:
 +
   consider_mapper(66)
   consider_mapper(71)
+  lli t2, 118
+  bne t0, t2,+
+  nop
+  load_overlay_from_rom(mapper_overlay, 4_txsrom)
+  j Mapper4_MMC3_TxSROM.Init
+  la_gp(ra, mapper_ok)
++
   lli t2, 119
   bne t0, t2,+
   nop

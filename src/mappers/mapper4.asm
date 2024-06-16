@@ -303,7 +303,23 @@ macro mmc3_map_2k_chr(page_addr) {
 
     ls_gp(lwu t3, chrrom_mask)
     ls_gp(lw t0, chrrom_start)
+if {MMC3_VARIANT} == MMC3_TQROM {
+    andi t1, cpu_t0, 0b0011'1110 // low bit unused
+} else if {MMC3_VARIANT} == MMC3_TxSROM {
+    if {page_addr} < 0x1000 {
+        andi t1, cpu_t0, 0b1000'0000
+        sll t1, 10-7 // select internal RAM bank
+        la_gp(a0, ppu_ram - ({page_addr} + 0x2000))
+        add a0, t1
+        sw a0, ppu_map + {page_addr}/0x400*4 + 8*4 (r0) // 0x2000 or 0x2800
+        addi a0, -0x400
+        sw a0, ppu_map + {page_addr}/0x400*4 + 9*4 (r0) // 0x2400 or 0x2c00
+    }
+    andi t1, cpu_t0, 0b0111'1110 // low bit unused
+} else if {MMC3_VARIANT} == MMC3_base {
+    // base, all bits
     andi t1, cpu_t0, 0b1111'1110 // low bit unused
+}
     sll t1, mmc3_chrrom_page_shift
 if {MMC3_VARIANT} == MMC3_TQROM {
     andi t2, cpu_t0, 0b0100'0000
@@ -334,7 +350,21 @@ macro mmc3_map_1k_chr(page_addr) {
 
     ls_gp(lwu t3, chrrom_mask)
     ls_gp(lw t0, chrrom_start)
+if {MMC3_VARIANT} == MMC3_TQROM {
+    andi t1, cpu_t0, 0b0011'1111
+} else if {MMC3_VARIANT} == MMC3_TxSROM {
+    if {page_addr} < 0x1000 {
+        andi t1, cpu_t0, 0b1000'0000
+        sll t1, 10-7 // select internal RAM bank
+        la_gp(a0, ppu_ram - ({page_addr} + 0x2000))
+        add a0, t1
+        sw a0, ppu_map + {page_addr}/0x400*4+8*4 (r0)
+    }
+    andi t1, cpu_t0, 0b0111'1111
+} else {
+    // base, all bits
     andi t1, cpu_t0, 0b1111'1111
+}
     sll t1, mmc3_chrrom_page_shift
 if {MMC3_VARIANT} == MMC3_TQROM {
     andi t2, cpu_t0, 0b0100'0000
@@ -482,6 +512,7 @@ MMC3Bank7:
   lli a0, 1
 
 MMC3Mirroring:
+if {MMC3_VARIANT} != MMC3_TxSROM {
   ls_gp(lbu t0, flags6)
   la_gp(a0, ppu_ram + 0)
 // Ignored if four-screen mirroring is set in header
@@ -495,6 +526,7 @@ MMC3Mirroring:
   j HorizontalMirroring
   nop
 +
+}
   jr ra
   nop
 
