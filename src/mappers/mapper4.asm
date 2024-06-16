@@ -2,10 +2,56 @@
 
 //define LOG_MMC3()
 
+if {MMC3_VARIANT} == MMC3_base {
+// constants to define once
 constant mmc3_prgrom_page_shift(13) // 8K
 constant mmc3_chrrom_page_shift(10) // 1K
 
-scope Mapper4: {
+// common bss, defined once for base, positions must be the same in the variants
+// this is done because bss can't be used in a scope
+begin_bss()
+align(8)
+mmc3_bank_data:;        fill 8
+
+mmc3_bank_vectors:;     fill 8*4
+mmc3_jump_table:;       fill 8*4
+mmc3_prgrom_vaddr:;     dw 0
+
+mmc3_prgrom_tlb_index:; db 0
+mmc3_bank_select:;      db 0
+mmc3_scanline_counter:; db 0
+mmc3_scanline_latch:;   db 0
+mmc3_irq_enabled:;      db 0
+align(4)
+end_bss()
+
+// The scanline counter is placed first so that it is at a fixed address within the overlay,
+// regardless of variant. The label, though, is defined only in the base
+MMC3ScanlineCounter:
+} // end of base-only values
+  ls_gp(lbu t0, mmc3_scanline_counter)
+  ls_gp(lbu t2, mmc3_scanline_latch)
+  bnez t0,+
+  addi t0, -1
+
+// Reload
+  jr ra
+  ls_gp(sb t2, mmc3_scanline_counter)
+
++
+  bnez t0,+
+  ls_gp(sb t0, mmc3_scanline_counter)
+// Hit, trigger IRQ
+  ls_gp(lbu t1, mmc3_irq_enabled)
+  lbu t0, irq_pending (r0)
+  beqz t1,+
+  ori t0, intMapper
+  sb t0, irq_pending (r0)
++
+  jr ra
+  nop
+
+scope Mapper4_{MMC3_VARIANT}: {
 Init:
   addi sp, 8
   sw ra, -8 (sp)
@@ -139,29 +185,6 @@ if {defined LOG_MMC3} {
   jr t0
   nop
 
-ScanlineCounter:
-  ls_gp(lbu t0, mmc3_scanline_counter)
-  ls_gp(lbu t2, mmc3_scanline_latch)
-  bnez t0,+
-  addi t0, -1
-
-// Reload
-  jr ra
-  ls_gp(sb t2, mmc3_scanline_counter)
-
-+
-  bnez t0,+
-  ls_gp(sb t0, mmc3_scanline_counter)
-// Hit, trigger IRQ
-  ls_gp(lbu t1, mmc3_irq_enabled)
-  lbu t0, irq_pending (r0)
-  beqz t1,+
-  ori t0, intMapper
-  sb t0, irq_pending (r0)
-+
-  jr ra
-  nop
-
 MMC3JumpTableData:
   dw MMC3BankSelect, MMC3Bank0_CHRMode0, MMC3Mirroring, MMC3PRGRAM, MMC3IRQLatch, MMC3IRQReload, MMC3IRQDisable, MMC3IRQEnable
 align(8)
@@ -278,11 +301,20 @@ macro mmc3_map_2k_chr(page_addr) {
     lw ra, cpu_rw_handler_ra (r0)
 +
 
+    ls_gp(lwu t3, chrrom_mask)
     ls_gp(lw t0, chrrom_start)
-    ls_gp(lwu t2, chrrom_mask)
     andi t1, cpu_t0, 0b1111'1110 // low bit unused
     sll t1, mmc3_chrrom_page_shift
-    and t1, t2
+if {MMC3_VARIANT} == MMC3_TQROM {
+    andi t2, cpu_t0, 0b0100'0000
+    beqz t2,+
+    and t1, t3
+    la t0, chrram
+    andi t1, 0x1fff // 8K, maybe unnecessary with all the other masks
++
+} else {
+    and t1, t3
+}
     add t0, t1
     addi t0, -{page_addr}
 
@@ -300,10 +332,20 @@ macro mmc3_map_1k_chr(page_addr) {
     lw ra, cpu_rw_handler_ra (r0)
 +
 
+    ls_gp(lwu t3, chrrom_mask)
     ls_gp(lw t0, chrrom_start)
-    ls_gp(lwu t2, chrrom_mask)
-    sll t1, cpu_t0, mmc3_chrrom_page_shift
-    and t1, t2
+    andi t1, cpu_t0, 0b1111'1111
+    sll t1, mmc3_chrrom_page_shift
+if {MMC3_VARIANT} == MMC3_TQROM {
+    andi t2, cpu_t0, 0b0100'0000
+    beqz t2,+
+    and t1, t3
+    la t0, chrram
+    andi t1, 0x1fff // 8K, maybe unnecessary with all the other masks
++
+} else {
+    and t1, t3
+}
     add t0, t1
     addi t0, -{page_addr}
 
@@ -481,25 +523,7 @@ MMC3IRQEnable:
 // cpu_t1 is the address, lsb is 1, so this will serve to write nonzero
   jr ra
   ls_gp(sb cpu_t1, mmc3_irq_enabled)
-}
 
-begin_bss()
-align(8)
-mmc3_bank_data:;        fill 8
-
-mmc3_bank_vectors:;     fill 8*4
-mmc3_jump_table:;       fill 8*4
-mmc3_prgrom_vaddr:;     dw 0
-
-mmc3_prgrom_tlb_index:; db 0
-mmc3_bank_select:;      db 0
-mmc3_scanline_counter:; db 0
-mmc3_scanline_latch:;   db 0
-mmc3_irq_enabled:;      db 0
-align(4)
-end_bss()
-
-if {defined LOG_MMC3} {
 mmc3_msg:
   db "MMC3 write ",0
 mmc3_prg_msg:

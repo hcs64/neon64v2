@@ -122,7 +122,7 @@ constant mmc3_irq_delay(4)
   lbu t0, ppu_mask (r0)
   andi t0, 0b0001'1000
   neg t0
-  bltzal t0, Mapper4.ScanlineCounter
+  bltzal t0, MMC3ScanlineCounter
   nop
 // TODO consider different combinations of pattern tables, 8x16 sprites, 2006 clocking...
   daddi cycle_balance, (sprite_fetch_pixels - mmc3_irq_delay) * ppu_div

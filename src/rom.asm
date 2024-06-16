@@ -23,8 +23,18 @@ begin_overlay(2)
 include "mappers/mapper2.asm"
 begin_overlay(3)
 include "mappers/mapper3.asm"
-begin_overlay(4)
+
+constant MMC3_base(1)
+constant MMC3_TQROM(2)
+
+define MMC3_VARIANT(MMC3_base)
+begin_overlay(4_base)
 include "mappers/mapper4.asm"
+
+define MMC3_VARIANT(MMC3_TQROM)
+begin_overlay(4_tqrom)
+include "mappers/mapper4.asm"
+
 begin_overlay(5)
 include "mappers/mapper5.asm"
 begin_overlay(7)
@@ -250,7 +260,15 @@ macro consider_mapper(id) {
 not_mmc1:
   consider_mapper(2)
   consider_mapper(3)
-  consider_mapper(4)
+
+  lli t2, 4
+  bne t0, t2, not_mmc3_base
+  nop
+  load_overlay_from_rom(mapper_overlay, 4_base)
+  j Mapper4_MMC3_base.Init
+  la_gp(ra, mapper_ok)
+not_mmc3_base:
+
   consider_mapper(5)
   consider_mapper(7)
   consider_mapper(9)
@@ -273,12 +291,19 @@ not_mmc1:
 +
   consider_mapper(66)
   consider_mapper(71)
+  lli t2, 119
+  bne t0, t2,+
+  nop
+  load_overlay_from_rom(mapper_overlay, 4_tqrom)
+  j Mapper4_MMC3_TQROM.Init
+  la_gp(ra, mapper_ok)
++
 // HACK pretend 206 is 4
   lli t2, 206
   bne t0, t2,+
   nop
-  load_overlay_from_rom(mapper_overlay, 4)
-  j Mapper4
+  load_overlay_from_rom(mapper_overlay, 4_base)
+  j Mapper4_MMC3_base.Init
   la_gp(ra, mapper_ok)
 +
 
