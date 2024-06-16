@@ -126,6 +126,24 @@ constant mmc3_irq_delay(4)
   nop
 // TODO consider different combinations of pattern tables, 8x16 sprites, 2006 clocking...
   daddi cycle_balance, (sprite_fetch_pixels - mmc3_irq_delay) * ppu_div
+} else if {defined PPU_RAMBO} {
+constant rambo_irq_delay(8)
+
+  daddi cycle_balance, rambo_irq_delay * ppu_div
+  bgezal cycle_balance, Scheduler.Yield
+  nop
+
+  ls_gp(lbu t0, rambo_irq_mode)
+  bnez t0,+ // 0 == scanline mode
+  nop
+
+  lbu t0, ppu_mask (r0)
+  andi t0, 0b0001'1000
+  neg t0
+  bltzal t0, Mapper64.ScanlineCounter
+  nop
++
+  daddi cycle_balance, (sprite_fetch_pixels - rambo_irq_delay) * ppu_div
 } else {
   daddi cycle_balance, sprite_fetch_pixels * ppu_div
 }

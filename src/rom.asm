@@ -58,6 +58,8 @@ begin_overlay(31)
 include "mappers/mapper31.asm"
 begin_overlay(34)
 include "mappers/mapper34.asm"
+begin_overlay(64)
+include "mappers/mapper64.asm"
 begin_overlay(66)
 include "mappers/mapper66.asm"
 begin_overlay(71)
@@ -294,6 +296,7 @@ not_mmc3_base:
   j Mapper34.Init
   la_gp(ra, mapper_ok)
 +
+  consider_mapper(64)
   consider_mapper(66)
   consider_mapper(71)
   lli t2, 118

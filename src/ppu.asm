@@ -117,6 +117,12 @@ define PPU_MMC5()
 include "ppu_task.asm"
 }
 
+begin_overlay(rambo)
+scope ppu_rambo {
+define PPU_RAMBO()
+include "ppu_task.asm"
+}
+
 end_overlay_region()
 
 scope PPU {
