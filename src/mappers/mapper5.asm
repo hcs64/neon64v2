@@ -8,7 +8,6 @@ constant mmc5_mode_3_chrrom_page_shift(10) // 1K
 // - PRG mode 2 and 3
 // - no WRAM
 // - CHR mode 3
-// - no extended attributes
 // - no sound
 
 scope Mapper5: {
@@ -23,6 +22,7 @@ Init:
   ls_gp(sb t0, mmc5_prg_5117)
   ls_gp(sb r0, mmc5_irq_enabled)
   ls_gp(sb r0, mmc5_in_frame)
+  ls_gp(sb r0, mmc5_extended_ram_mode)
 
 // Init TLB
 // These 4 8K pages should be adjacent in virtual address and TLB index space,
@@ -66,6 +66,15 @@ Init:
   sw t1, cpu_write_map + 0x52 * 4 (r0)
   la_gp(t1, Read52)
   sw t1, cpu_read_map + 0x52 * 4 (r0)
+
+// Map extended RAM into CPU at 0x5c00-0x6000
+  la t0, (four_screen_ram & rdram_mask) + tlb_rdram - 0x5c00
+  lli t1, (4-1) * 4
+-
+  sw t0, cpu_read_map + 0x5c * 4 (t1)
+  sw t0, cpu_write_map + 0x5c * 4 (t1)
+  bnez t1,-
+  addi t1, -4
 
 // Initial PRG setup
   jal PRG_Mode23_E
@@ -197,7 +206,13 @@ Write51Common:
   beq cpu_t1, t1, Nametable
   lli t1, 0x5101
   beq cpu_t1, t1, CHR_Mode
+  lli t1, 0x5104
+  bne cpu_t1, t1,+
   nop
+// TODO maybe should affect 0x5c00 access?
+  andi t0, cpu_t0, 0b11
+  ls_gp(sb t0, mmc5_extended_ram_mode)
++
 
 // unimplemented, syscall?
   jr ra
@@ -497,6 +512,7 @@ mmc5_cur_scanline:; db 0
 mmc5_irq_scanline:; db 0
 mmc5_irq_enabled:; db 0
 mmc5_in_frame:; db 0
+mmc5_extended_ram_mode:; db 0
 
 align(4)
 end_bss()

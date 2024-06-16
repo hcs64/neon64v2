@@ -702,6 +702,14 @@ FetchBG:
   ld t8, target_cycle (r0)
   ls_gp(ld t0, ppu_catchup_current_cycle)
   dadd t8, cycle_balance
+  dsub t8, t0, t8 // finish t8 setup
+
+// Yield immediately if we already ran past this time
+  bltz t8,+
+  ls_gp(sw ra, ppu_catchup_ra)
+  jr ra
+  nop
++
 
 // A hack to compensate for mid-line fine X scroll change:
 // If fetch is starting early enough in the line, use the current
@@ -712,7 +720,7 @@ FetchBG:
   lbu t1, ppu_fine_x_scroll (r0)
   subi t2, ppu_t2, bg_fetch_tiles / 2
   bltz t2,+
-  dsub t8, t0, t8 // finish t8 setup
+  nop
   sb t1, chosen_fine_x_scroll (r0)
 +
 
@@ -720,13 +728,6 @@ FetchBG:
   move t9, ppu_t2
 // s8: Temp vaddr
   move s8, ppu_vaddr
-
-// Yield immediately if we already ran past this time
-  bltz t8,+
-  ls_gp(sw ra, ppu_catchup_ra)
-  jr ra
-  nop
-+
 
 // If rendering was disabled mid-line...
 // Spend cycles, but avoid updating vaddr
@@ -757,6 +758,7 @@ if 1 == 1 {
 +
   sub t0, t9, ppu_t2
 
+// TODO account PPU catchup MIPS CPU cycles against the PPU task?
 // track cycles
   ls_gp(ld t2, ppu_catchup_current_cycle)
   sll t1, t0, 3 // *8
@@ -771,9 +773,16 @@ if 1 == 1 {
 fetch_enabled:
 }
 
-
+if {defined PPU_MMC5} {
+  ls_gp(lbu t0, mmc5_extended_ram_mode)
+  lbu a2, ppu_ctrl (r0)
+  subi t0, 1
+  beqz t0, MMC5_Extended_Fetch
+  nop
+} else {
 // a2: BG pattern table base + fine Y
   lbu a2, ppu_ctrl (r0)
+}
   srl t0, s8, 12
   andi a2, 0b1'0000
   sll a2, 12-4
@@ -883,6 +892,78 @@ bg_fetch_finish:
   sub t0, t9, ppu_t2
   j -
   sw r0, ppu_catchup_cb (r0)
+
+if {defined PPU_MMC5} {
+MMC5_Extended_Fetch:
+// t8: bg cycle balance
+// s8: vaddr
+
+// a2: pattern table base
+// TODO upper bits from 0x5130? may not be needed for any game
+  ls_gp(lw a2, chrrom_start)
+  srl t0, s8, 12
+  add a2, t0 // fine y
+
+MMC5_Reload_Name_Table:
+// a0: name table address
+  andi t1, s8, 0b1100'0000'0000 // NT select
+  srl t3, t1, 10-2
+  lw t3, ppu_map + 8*4 (t3) // 0x2000 >> 10 == 8
+  andi a0, s8, 0b1111'1111'1111 // Current NT address
+  addi a0, 0x2000
+  add a0, t3
+
+// a1: extended attribute table address
+  andi a1, s8, 0b0011'1111'1111 // Current NT address
+  la t0, four_screen_ram
+  add a1, t0
+
+MMC5_fetch_loop:
+  bgez t8, bg_fetch_yield
+// Fetch NT byte
+  lbu t0, 0 (a0)
+  daddi t8, 8 * ppu_div
+  addi a0, 1
+
+// a3: extended attribute byte
+  lbu a3, 0 (a1)
+  addi a1, 1
+
+// Fetch PT bytes
+  sll t3, t0, 4
+  add t3, a2
+// Set bank from extended atribute
+  andi t1, a3, 0b0011'1111
+  sll t1, 12 // 4K
+  add t1, t3
+
+  dsll t2, ppu_t0, 16
+  lbu t3, 0 (t1)
+  lbu t1, 8 (t1)
+  sll t3, 8
+  or t3, t1
+
+  bgezal ppu_t0, nt_full
+  or ppu_t0, t3, t2
+
+// Select AT bits
+  srl t0, a3, 6
+  dsll t1, ppu_t1, 8
+  bgezal ppu_t1, at_full
+  or ppu_t1, t0, t1
+
+  beqz ppu_t2, bg_fetch_finish
+  addi ppu_t2, -1
+
+  andi t0, a0, 0b1'1111
+  bnez t0, MMC5_fetch_loop
+  nop
+
+// Wrap to other nametable (horizontal)
+  andi s8, 0b111'1111'1110'0000
+  j MMC5_Reload_Name_Table
+  xori s8, 0b000'0100'0000'0000
+}
 
 bg_fetch_flush:
 if {defined PPU_MMC2} || {defined PPU_MMC4} {

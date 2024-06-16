@@ -63,7 +63,7 @@ Init:
 // Non-negative, read-only address space for all of RDRAM (16MB-24MB)
   la t0, (0x80'0000-1)&0x1ff'e000 // Mask is 24-13
   mtc0 t0, PageMask
-  lli t0, 1
+  lli t0, 2
   mtc0 t0, Index
 // Starts at 16MB
   la t0, tlb_ro_rdram
