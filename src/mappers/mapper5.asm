@@ -468,14 +468,14 @@ MMC5Set8KRAMBank:
 
 // TODO only the first bank is saved
 ram_pages:
-  dw nes_extra_ram
-  dw nes_mmc5_ram1
-  dw nes_mmc5_ram2
-  dw nes_mmc5_ram3
-  dw nes_mmc5_ram4
-  dw nes_mmc5_ram5
-  dw nes_mmc5_ram6
-  dw nes_mmc5_ram7
+  dw nes_extra_ram & 0x1fff'ffff
+  dw nes_mmc5_ram1 & 0x1fff'ffff
+  dw nes_mmc5_ram2 & 0x1fff'ffff
+  dw nes_mmc5_ram3 & 0x1fff'ffff
+  dw nes_mmc5_ram4 & 0x1fff'ffff
+  dw nes_mmc5_ram5 & 0x1fff'ffff
+  dw nes_mmc5_ram6 & 0x1fff'ffff
+  dw nes_mmc5_ram7 & 0x1fff'ffff
 
 Read52:
 // cpu_t1: address
