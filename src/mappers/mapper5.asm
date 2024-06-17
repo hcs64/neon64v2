@@ -6,7 +6,7 @@ constant mmc5_mode_3_chrrom_page_shift(10) // 1K
 
 // A minimal implementation:
 // - PRG mode 2 and 3
-// - no WRAM
+// - 64K WRAM
 // - CHR mode 3
 // - no sound
 
@@ -25,14 +25,18 @@ Init:
   ls_gp(sb r0, mmc5_extended_ram_mode)
 
 // Init TLB
-// These 4 8K pages should be adjacent in virtual address and TLB index space,
+// These 5 8K pages should be adjacent in virtual address and TLB index space,
 // so only the first address and index is stored.
 
-// 8K page for 0x8000-0xa000
+// 8K page for 0x6000-0x8000
   jal TLB.AllocateVaddr
   lli a0, 0x2000
   ls_gp(sw a0, mmc5_prgrom_vaddr)
   ls_gp(sb a1, mmc5_prgrom_tlb_index)
+
+// 8K page for 0x8000-0xa000
+  jal TLB.AllocateVaddr
+  lli a0, 0x2000
 
 // 8K page for 0xa000-0xc000
   jal TLB.AllocateVaddr
@@ -46,14 +50,15 @@ Init:
   jal TLB.AllocateVaddr
   lli a0, 0x2000
 
-// Map PRG
+// Map PRG (WRAM, PRG-ROM)
   ls_gp(lw t0, mmc5_prgrom_vaddr)
-  addi t0, -0x8000
+  addi t0, -0x6000
   lli t2, 0
-  lli t3, 0x80
+  lli t3, 0xa0
 
 -
-  sw t0, cpu_read_map + 0x80 * 4 (t2)
+  sw t0, cpu_read_map + 0x60 * 4 (t2)
+  sw t0, cpu_write_map + 0x60 * 4 (t2)
   addi t3,-1
   bnez t3,-
   addi t2, 4
@@ -305,44 +310,71 @@ Nametable:
   nop
 
 PRG_Mode23_6:
-// TODO
-  jr ra
-  nop
+  andi a1, cpu_t0, 0b1111
+  j MMC5Set8KRAMBank
+  lli a0, 0
 
 PRG_Mode2_8_A:
   addi sp, 8
   sw ra, -8 (sp)
 
-  andi a1, cpu_t0, 0b1111'1110
-  jal MMC5Set8KPRGBank
-  lli a0, 0
+  andi t0, cpu_t0, 0b1000'0000
+  bnez t0,+
+  nop
+
+  andi a1, cpu_t0, 0b0000'1110
+  jal MMC5Set8KRAMBank
+  lli a0, 1
 
   lw ra, -8 (sp)
   addi sp, -8
 
-  ori a1, cpu_t0, 1
-  j MMC5Set8KPRGBank // tail call
+  andi a1, cpu_t0, 0b0000'1110
+  ori a1, 1
+  j MMC5Set8KRAMBank // tail call
+  lli a0, 2
+
++
+  andi a1, cpu_t0, 0b0111'1110
+  jal MMC5Set8KPRGBank
   lli a0, 1
 
-PRG_Mode3_8:
-  move a1, cpu_t0
-  j MMC5Set8KPRGBank // tail call
-  lli a0, 0
+  lw ra, -8 (sp)
+  addi sp, -8
 
-PRG_Mode3_A:
-  move a1, cpu_t0
-  j MMC5Set8KPRGBank // tail call
-  lli a0, 1
-
-PRG_Mode23_C:
-  move a1, cpu_t0
+  andi a1, cpu_t0, 0b0111'1110
+  ori a1, 1
   j MMC5Set8KPRGBank // tail call
   lli a0, 2
 
-PRG_Mode23_E:
-  move a1, cpu_t0
-  j MMC5Set8KPRGBank // tail call
+PRG_Mode3_8:
+  andi t0, cpu_t0, 0b1000'0000
+  andi a1, cpu_t0, 0b0111'1111
+  bnez t0, MMC5Set8KPRGBank // tail call
+  lli a0, 1
+  j MMC5Set8KRAMBank // tail call
+  nop
+
+PRG_Mode3_A:
+  andi t0, cpu_t0, 0b1000'0000
+  andi a1, cpu_t0, 0b0111'1111
+  bnez t0, MMC5Set8KPRGBank // tail call
+  lli a0, 2
+  j MMC5Set8KRAMBank // tail call
+  nop
+
+PRG_Mode23_C:
+  andi t0, cpu_t0, 0b1000'0000
+  andi a1, cpu_t0, 0b0111'1111
+  bnez t0, MMC5Set8KPRGBank // tail call
   lli a0, 3
+  j MMC5Set8KRAMBank // tail call
+  nop
+
+PRG_Mode23_E:
+  andi a1, cpu_t0, 0b0111'1111
+  j MMC5Set8KPRGBank // tail call
+  lli a0, 4
 
 CHR_Sprite_Mode3_Bank:
 // a0: 1K pattern page index
@@ -386,9 +418,8 @@ CHR_BG_Mode3_Bank:
   sw t0, mmc5_pattern_map - gp_base + 0x1000/0x400*4 (t3)
 
 MMC5Set8KPRGBank:
-// a0: 8K page index (0: 0x8000-0xa000, 1: 0xa000-0xc000, etc)
+// a0: 8K page index (0: 0x6000-0x8000, 1: 0x8000-0xa000, etc)
 // a1: 8K bank to use
-// TODO set a flag for PPU I/O?
   ls_gp(lbu t3, mmc5_prgrom_tlb_index)
   ls_gp(lwu t1, prgrom_mask)
   add t3, a0
@@ -404,6 +435,35 @@ MMC5Set8KPRGBank:
 // Tail call
   j TLB.Map8K
   mtc0 t3, Index
+
+MMC5Set8KRAMBank:
+// a0: 8K page index (0: 0x6000-0x8000, 1: 0x8000-0xa000, etc)
+// a1: 8K bank to use
+  ls_gp(lbu t3, mmc5_prgrom_tlb_index)
+  andi a1, 0b0111
+  add t3, a0
+  ls_gp(lw t0, mmc5_prgrom_vaddr)
+
+  sll t2, a1, 2
+  add t2, gp
+  lw a1, ram_pages - gp_base (t2)
+
+  sll a0, 13 // 8K
+  add a0, t0
+
+// Tail call
+  j TLB.Map8K
+  mtc0 t3, Index
+
+ram_pages:
+  dw nes_extra_ram
+  dw nes_mmc5_ram1
+  dw nes_mmc5_ram2
+  dw nes_mmc5_ram3
+  dw nes_mmc5_ram4
+  dw nes_mmc5_ram5
+  dw nes_mmc5_ram6
+  dw nes_mmc5_ram7
 
 Read52:
 // cpu_t1: address
