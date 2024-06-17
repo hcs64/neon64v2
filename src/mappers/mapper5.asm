@@ -18,8 +18,9 @@ Init:
 // Init vars
   ls_gp(sd r0, mmc5_chr_5120_7)
   ls_gp(sw r0, mmc5_prg_5113_6)
-  lli t0, 0xff
+  lli t0, -1
   ls_gp(sb t0, mmc5_prg_5117)
+  ls_gp(sh t0, mmc5_mult1)
   ls_gp(sb r0, mmc5_irq_enabled)
   ls_gp(sb r0, mmc5_in_frame)
   ls_gp(sb r0, mmc5_extended_ram_mode)
@@ -470,6 +471,10 @@ Read52:
 // return value in cpu_t1
   lli t1, 0x5204
   beq cpu_t1, t1, ReadIRQ
+  lli t1, 0x5205
+  beq cpu_t1, t1, ReadMultLow
+  lli t1, 0x5206
+  beq cpu_t1, t1, ReadMultHigh
   nop
 
   jr ra
@@ -494,6 +499,10 @@ Write52:
   beq cpu_t1, t1, WriteScanlineCompare
   lli t1, 0x5204
   beq cpu_t1, t1, WriteIRQ
+  lli t1, 0x5205
+  beq cpu_t1, t1, WriteMult1
+  lli t1, 0x5206
+  beq cpu_t1, t1, WriteMult2
   nop
 
   jr ra
@@ -554,6 +563,31 @@ WriteScanlineCompare:
 WriteIRQ:
   jr ra
   ls_gp(sb cpu_t0, mmc5_irq_enabled)
+
+WriteMult1:
+  jr ra
+  ls_gp(sb cpu_t0, mmc5_mult1)
+
+WriteMult2:
+  jr ra
+  ls_gp(sb cpu_t0, mmc5_mult2)
+
+ReadMultLow:
+  ls_gp(lbu t0, mmc5_mult1)
+  ls_gp(lbu t1, mmc5_mult2)
+  mult t0, t1
+  mflo cpu_t1
+  jr ra
+  andi cpu_t1, 0xff
+
+ReadMultHigh:
+  ls_gp(lbu t0, mmc5_mult1)
+  ls_gp(lbu t1, mmc5_mult2)
+  mult t0, t1
+  mflo cpu_t1
+  srl cpu_t1, 8
+  jr ra
+  andi cpu_t1, 0xff
 }
 
 begin_bss()
@@ -565,6 +599,9 @@ mmc5_prg_5113_6:; dw 0
 mmc5_pattern_map:; dw 0,0,0,0,0,0,0,0
 
 mmc5_prgrom_vaddr:; dw 0
+
+mmc5_mult1:; db 0
+mmc5_mult2:; db 0
 
 mmc5_prgrom_tlb_index:; db 0
 mmc5_prg_5117:; db 0
