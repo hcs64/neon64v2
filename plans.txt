@@ -52,7 +52,6 @@ Desired mappers:
 
 - 111 (homebrew, memblers)
 
-- 5 (MMC5 beyond Castlevania 3, e.g. Uncharted Waters, SimCity)
 - 24 (VRC6a, Akumajou Densetsu)
 - 25 (VRC6b, Madara etc)
 - 68 (After Burner)
@@ -61,11 +60,14 @@ Desired mappers:
 Known bugs:
 * Profiling is wonky in PAL mode
 * Mapper 64 missing cycle count IRQ mode (Skull & Crossbones, etc)
+* Mapper 5 missing some features (split scroll, CHR mode 2, expansion sound)
+* Mapper 5 may not save the correct battery backed RAM bank (e.g. Uncharted Waters)
 
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud
   - Some glitching in Mega Man 2 intro (check hw?)
   - No Namco 163 extra channels
+  - No MMC5 extra channels
 
 * Crashes
   - Wally Bear and the No! Gang hangs on boot

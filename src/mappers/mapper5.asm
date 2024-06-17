@@ -4,11 +4,15 @@
 
 constant mmc5_mode_3_chrrom_page_shift(10) // 1K
 
-// A minimal implementation:
+// A basic implementation:
 // - PRG mode 2 and 3
-// - 64K WRAM
+// - up to 64K WRAM
+//   - but saving isn't necessarily using the correct bank
 // - CHR mode 3
-// - no sound
+// - extended attributes
+// - multiplier
+// - no expansion sound
+// - no split scrolling
 
 scope Mapper5: {
 Init:
@@ -52,6 +56,8 @@ Init:
   lli a0, 0x2000
 
 // Map PRG (WRAM, PRG-ROM)
+// TODO: This allows writes to ROM because RAM can be mapped
+// into 0x6000-0xe000, probably need to block that.
   ls_gp(lw t0, mmc5_prgrom_vaddr)
   addi t0, -0x6000
   lli t2, 0
@@ -85,6 +91,10 @@ Init:
 // Initial PRG setup
   jal PRG_Mode23_E
   lli cpu_t0, 0xff
+
+// Note: Default CPU setup maps nes_extra_ram to 0x6000, with a fixed TLB index.
+// We have a different vaddr and index but it ought to still work even when we
+// remap since it's the same underlying physical page.
 
 // Initial BG CHR setup
   ls_gp(lw t0, chrrom_start)
@@ -456,6 +466,7 @@ MMC5Set8KRAMBank:
   j TLB.Map8K
   mtc0 t3, Index
 
+// TODO only the first bank is saved
 ram_pages:
   dw nes_extra_ram
   dw nes_mmc5_ram1
