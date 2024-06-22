@@ -122,8 +122,7 @@ BuildMain:
   jal AddItem
   la_gp(a0, dismiss_menu_item)
 
-  ls_gp(lbu t0, flags6)
-  andi t0, 0b10 // persistent memory present
+  ls_gp(lw t0, save_ram_8k_addr)
   beqz t0,+
   nop
   jal AddItem

@@ -60,8 +60,7 @@ Desired mappers:
 Known bugs:
 * Profiling is wonky in PAL mode
 * Mapper 64 missing cycle count IRQ mode (Skull & Crossbones, etc)
-* Mapper 5 missing some features (split scroll, CHR mode 2, expansion sound)
-* Mapper 5 may not save the correct battery backed RAM bank (e.g. Uncharted Waters)
+* Mapper 5 missing some features (split scroll, CHR mode 2, expansion sound, 32K saves)
 
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud

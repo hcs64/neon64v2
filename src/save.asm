@@ -10,6 +10,13 @@ constant sram_save_footer_cart_addr(sram_save_data_cart_addr + nes_extra_ram_siz
 // This only happens once at boot, before the scheduler gets going,
 // so it is simpler to read synchronously.
 scope LoadExtraRAMFromSRAM: {
+  ls_gp(lw t0, save_ram_8k_addr)
+  bnez t0,+
+  nop
+  jr ra
+  nop
++
+
   addi sp, 8
   sw ra, -8 (sp)
 
@@ -45,7 +52,7 @@ scope LoadExtraRAMFromSRAM: {
   nop
 
 // Read save data
-  la t0, nes_extra_ram
+  ls_gp(lw t0, save_ram_8k_addr)
   lli t1, nes_extra_ram_size/DCACHE_LINE
 -
   cache data_hit_invalidate, 0 (t0)
@@ -54,7 +61,7 @@ scope LoadExtraRAMFromSRAM: {
   addi t0, DCACHE_LINE
 
   la a0, sram_save_data_cart_addr
-  la a1, nes_extra_ram
+  ls_gp(lw a1, save_ram_8k_addr)
   jal PI.ReadSync
   lli a2, nes_extra_ram_size
 
@@ -66,12 +73,19 @@ end:
 
 // This happens while the game is running, so it is broken into async steps.
 scope SaveExtraRAMToSRAM: {
+  ls_gp(lw t0, save_ram_8k_addr)
+  bnez t0,+
+  nop
+// no save RAM is set up, should not have attempted to save
+  syscall 1
++
+
   addi sp, 8
   sw ra, -8 (sp)
 
 // Make a copy
   lli t0, nes_extra_ram_size
-  la t1, nes_extra_ram
+  ls_gp(lw t1, save_ram_8k_addr)
   la t2, nes_extra_ram_save_copy
 -
   ld t3, 0 (t1)

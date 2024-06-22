@@ -137,7 +137,7 @@ still_fail:
   ls_gp(sw a0, nes_rom_cart_addr)
 
 // Check for NES 2.0 header
-  ls_gp(lbu t0, nes_header + 7)
+  ls_gp(lbu t0, flags7)
   andi t0, 0b1100
   lli t1, 0b1000
   bne t0, t1, after_nes2
@@ -147,7 +147,7 @@ still_fail:
 
 if {defined NTSC_NES} {
 // Check if we should switch to PAL mode from default NTSC mode
-// TODO Probably shouldn't do this if we were manually switched back to PAL mode
+// TODO Probably shouldn't do this if we were manually switched back to NTSC mode
   ls_gp(lbu t0, nes_header + 12)
   lli t1, 1 // PAL
   andi t0, 0b11
@@ -226,6 +226,17 @@ after_nes2:
   jal HorizontalMirroring
   nop
 +
+
+// Set up persistent memory
+  ls_gp(lbu t0, flags6)
+  andi t0, 0b10 // persistent memory present
+  beqz t0,+
+  lli t0, 0
+// default is the 8K extra RAM, may be overridden by the mapper
+  la t0, nes_extra_ram
++
+  ls_gp(sw t0, save_ram_8k_addr)
+
 
 // Handle mapper
   ls_gp(lbu t0, flags6)
@@ -524,7 +535,7 @@ bad_page_count:
   la_gp(a0, mapper_limits)
 
   jal PrintDec
-  ls_gp(lbu a0, nes_header + 4)
+  ls_gp(lbu a0, prgrom_page_count)
 
   j DisplayDebugAndHalt
   nop
@@ -584,6 +595,7 @@ prgrom_last_page_phys:; dw 0
 chrrom_start:; dw 0
 prgrom_mask:; dw 0
 chrrom_mask:; dw 0
+save_ram_8k_addr:; dw 0
 
 uxrom_prgrom_vaddr:;  dw 0
 uxrom_prgrom_bank:; db 0

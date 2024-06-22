@@ -6,8 +6,8 @@ constant mmc5_mode_3_chrrom_page_shift(10) // 1K
 
 // A basic implementation:
 // - PRG mode 2 and 3
-// - up to 64K WRAM
-//   - but saving isn't necessarily using the correct bank
+// - up to 64K PRG RAM
+//   - save with 8K (1x8K or first of 2x8K)
 // - CHR mode 3
 // - extended attributes
 // - multiplier
@@ -58,6 +58,9 @@ Init:
 // Map PRG (WRAM, PRG-ROM)
 // TODO: This allows writes to ROM because RAM can be mapped
 // into 0x6000-0xe000, probably need to block that.
+// Could be done by using a junk write-only page in the
+// write mapping, at the cost of doubling the number of TLB
+// pages.
   ls_gp(lw t0, mmc5_prgrom_vaddr)
   addi t0, -0x6000
   lli t2, 0
@@ -69,6 +72,41 @@ Init:
   addi t3,-1
   bnez t3,-
   addi t2, 4
+
+// Set up save RAM using NES 2.0
+// Note: By default all 3 bits are used, specific masking isn't needed since the
+// same bank index is used consistently. This can be overridden to control save
+// RAM placement.
+  lli a1, 0b111
+  ls_gp(lbu t0, flags6)
+  andi t0, 0b10 // persistent memory present
+  beqz t0, finish_save_ram
+  lli a0, 0 // by default disable save
+  ls_gp(lbu t0, flags7)
+  lli t1, 0b1000
+  andi t0, 0b1100
+  bne t0, t1, finish_save_ram
+  nop
+  ls_gp(lbu t0, nes_header + 10) // PRG-RAM size
+  srl t1, t0, 4       // non-volatile size
+  beqz t1, finish_save_ram
+  nop
+
+  lli t1, 0b0111'0111 // 8K V, 8K NV, log2(8K/64) = 7
+  beq t0, t1, save_8k
+  lli t1, 0b0111'0000 // 8K NV
+  bne t0, t1,+
+  nop
+save_8k:
+  la a0, nes_extra_ram
+  j finish_save_ram
+  lli a1, 0b100 // only chip select (1 should be open bus for 1x8K)
++
+  // TODO 32k save?
+
+finish_save_ram:
+  ls_gp(sw a0, save_ram_8k_addr)
+  ls_gp(sb a1, mmc5_extra_ram_bank_mask)
 
 // Map config register page
 // TODO 0x50
@@ -451,13 +489,14 @@ MMC5Set8KRAMBank:
 // a0: 8K page index (0: 0x6000-0x8000, 1: 0x8000-0xa000, etc)
 // a1: 8K bank to use
   ls_gp(lbu t3, mmc5_prgrom_tlb_index)
-  andi a1, 0b0111
-  add t3, a0
+  ls_gp(lbu t1, mmc5_extra_ram_bank_mask)
   ls_gp(lw t0, mmc5_prgrom_vaddr)
+  and a1, t1
+  add t3, a0
 
   sll t2, a1, 2
   add t2, gp
-  lw a1, ram_pages - gp_base (t2)
+  lw a1, extra_ram_pages - gp_base (t2)
 
   sll a0, 13 // 8K
   add a0, t0
@@ -466,8 +505,7 @@ MMC5Set8KRAMBank:
   j TLB.Map8K
   mtc0 t3, Index
 
-// TODO only the first bank is saved
-ram_pages:
+extra_ram_pages:
   dw nes_extra_ram & 0x1fff'ffff
   dw nes_mmc5_ram1 & 0x1fff'ffff
   dw nes_mmc5_ram2 & 0x1fff'ffff
@@ -621,6 +659,7 @@ mmc5_irq_scanline:; db 0
 mmc5_irq_enabled:; db 0
 mmc5_in_frame:; db 0
 mmc5_extended_ram_mode:; db 0
+mmc5_extra_ram_bank_mask:; db 0
 
 align(4)
 end_bss()
