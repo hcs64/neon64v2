@@ -60,7 +60,7 @@ Desired mappers:
 Known bugs:
 * Profiling is wonky in PAL mode
 * Mapper 64 missing cycle count IRQ mode (Skull & Crossbones, etc)
-* Mapper 5 missing some features (split scroll, CHR mode 2, expansion sound, 32K saves)
+* Mapper 5 missing some features (split scroll, fill mode, expansion sound, 32K saves)
 
 * Audio
   - Pop when shooting sword in Zelda is irritatingly loud
@@ -74,6 +74,7 @@ Known bugs:
 * Mid-frame palette change
   - Bill & Ted - dialog boxes
   - Wizards & Warriors - status bar
+  - Metal Slader Glory - dialog
 
 * Timing
   - Delaying all interrupts by one instruction is not particularly

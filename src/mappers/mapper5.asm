@@ -8,7 +8,7 @@ constant mmc5_mode_3_chrrom_page_shift(10) // 1K
 // - PRG mode 2 and 3
 // - up to 64K PRG RAM
 //   - save with 8K (1x8K or first of 2x8K)
-// - CHR mode 3
+// - CHR mode 1 and 3
 // - extended attributes
 // - multiplier
 // - no expansion sound
@@ -23,6 +23,7 @@ Init:
   ls_gp(sd r0, mmc5_chr_5120_7)
   ls_gp(sw r0, mmc5_prg_5113_6)
   lli t0, -1
+  ls_gp(sb t0, mmc5_chr_5101_mode)
   ls_gp(sb t0, mmc5_prg_5117)
   ls_gp(sh t0, mmc5_mult1)
   ls_gp(sb r0, mmc5_irq_enabled)
@@ -249,13 +250,28 @@ Write51Common:
   lw ra, cpu_rw_handler_ra (r0)
 +
 
+  ls_gp(lbu t1, mmc5_chr_5101_mode)
   subi a0, cpu_t1, 0x5120
-  bltz a0,+
+  bnez t1, chr_mode_3
+  lli a1, 0
+  bltz a0, not_chr_bank
+  lli t1, 0x5123
+  beq cpu_t1, t1, CHR_Sprite_Mode1_Bank
+  lli t1, 0x5127
+  lli a1, 0x1000
+  beq cpu_t1, t1, CHR_Sprite_Mode1_Bank
+  lli t1, 0x512b
+  beq cpu_t1, t1, CHR_BG_Mode1_Bank
+  nop
+  j not_chr_bank
+  nop
+chr_mode_3:
+  bltz a0, not_chr_bank
   subi t1, cpu_t1, 0x5128
   bltz t1, CHR_Sprite_Mode3_Bank
   subi t1, cpu_t1, 0x512c
   bltz t1, CHR_BG_Mode3_Bank
-+
+not_chr_bank:
   lli t1, 0x5105
   beq cpu_t1, t1, Nametable
   lli t1, 0x5101
@@ -302,10 +318,20 @@ PRG_Switch_Mode3:
 
 CHR_Mode:
   andi t0, cpu_t0, 0b11
+  lli t1, 1
+  bne t0,t1,+
   lli t1, 3
-  beq t0,t1,+
+  // mode 1, store 0
+  jr ra
+  ls_gp(sb r0, mmc5_chr_5101_mode)
++
+  bne t0,t1,+
   nop
 
+  // mode 3, store nonzero
+  jr ra
+  ls_gp(sb t0, mmc5_chr_5101_mode)
++
   jal PrintStr0
   la_gp(a0, mmc5_unimplemented_chr_msg)
 
@@ -314,9 +340,6 @@ CHR_Mode:
   lli a1, 1
 
   j DisplayDebugAndHalt
-  nop
-+
-  jr ra
   nop
 
 name_table_pages:
@@ -425,6 +448,22 @@ PRG_Mode23_E:
   j MMC5Set8KPRGBank // tail call
   lli a0, 4
 
+CHR_Sprite_Mode1_Bank:
+// a1: 0 or 0x1000, which half of the pattern table to update
+// cpu_t0: 4K bank to use
+  ls_gp(lw t0, chrrom_start)
+  ls_gp(lwu t2, chrrom_mask)
+  sll t1, cpu_t0, mmc5_mode_3_chrrom_page_shift + 2
+  and t1, t2
+  add t0, t1
+  sub t0, a1
+  srl t3, a1, 10-2
+  sw t0, ppu_map + 0*4 (t3)
+  sw t0, ppu_map + 1*4 (t3)
+  sw t0, ppu_map + 2*4 (t3)
+  jr ra
+  sw t0, ppu_map + 3*4 (t3)
+
 CHR_Sprite_Mode3_Bank:
 // a0: 1K pattern page index
 // cpu_t0: 1K bank to use
@@ -465,6 +504,28 @@ CHR_BG_Mode3_Bank:
   subi t0, 0x1000
   jr ra
   sw t0, mmc5_pattern_map - gp_base + 0x1000/0x400*4 (t3)
+
+CHR_BG_Mode1_Bank:
+// Affects all pages for background
+// cpu_t0: 4K bank to use
+  ls_gp(lw t0, chrrom_start)
+  ls_gp(lwu t2, chrrom_mask)
+
+  sll t1, cpu_t0, mmc5_mode_3_chrrom_page_shift + 2
+  and t1, t2
+  add t0, t1
+  ls_gp(sw t0, mmc5_pattern_map + 0x0000/0x400*4)
+  ls_gp(sw t0, mmc5_pattern_map + 0x0400/0x400*4)
+  ls_gp(sw t0, mmc5_pattern_map + 0x0800/0x400*4)
+  ls_gp(sw t0, mmc5_pattern_map + 0x0c00/0x400*4)
+// technically only need the above, but store the offset mirror to simplify the PPU task
+// TODO: need to be able to disable this when switching out of 8x16 mode?
+  subi t0, 0x1000
+  ls_gp(sw t0, mmc5_pattern_map + 0x1000/0x400*4)
+  ls_gp(sw t0, mmc5_pattern_map + 0x1400/0x400*4)
+  ls_gp(sw t0, mmc5_pattern_map + 0x1800/0x400*4)
+  jr ra
+  ls_gp(sw t0, mmc5_pattern_map + 0x1c00/0x400*4)
 
 MMC5Set8KPRGBank:
 // a0: 8K page index (0: 0x6000-0x8000, 1: 0x8000-0xa000, etc)
@@ -653,6 +714,7 @@ mmc5_mult1:; db 0
 mmc5_mult2:; db 0
 
 mmc5_prgrom_tlb_index:; db 0
+mmc5_chr_5101_mode:; db 0 // 0 = 4K, otherwise 1K
 mmc5_prg_5117:; db 0
 mmc5_cur_scanline:; db 0
 mmc5_irq_scanline:; db 0
