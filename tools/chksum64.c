@@ -211,7 +211,9 @@ int main(int argc, char *argv[])
       }
       if( rlen > 0 ) {
         rlen -= n;
-        if( rlen <= 0 ) memset(buffer1, 0, BUFSIZE);
+        if( rlen <= 0 ) {
+            memset_s(buffer1, BUFSIZE, 0, BUFSIZE);
+        }
       }
       clen -= n;
     }
