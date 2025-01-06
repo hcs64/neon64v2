@@ -170,7 +170,7 @@ CmdPRGBank0:
 // delay slot
   ls_gp(lbu t3, sunsoft_prgrom_tlb_index)
   ls_gp(lw a0, sunsoft_prgrom_vaddr)
-  la a1, nes_extra_ram
+  la a1, nes_extra_ram & 0x1fff'ffff
 
 // Tail call
   j TLB.Map8K
