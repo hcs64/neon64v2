@@ -62,6 +62,8 @@ begin_overlay(64)
 include "mappers/mapper64.asm"
 begin_overlay(66)
 include "mappers/mapper66.asm"
+begin_overlay(69)
+include "mappers/mapper69.asm"
 begin_overlay(71)
 include "mappers/mapper71.asm"
 end_overlay_region()
@@ -309,6 +311,7 @@ not_mmc3_base:
 +
   consider_mapper(64)
   consider_mapper(66)
+  consider_mapper(69)
   consider_mapper(71)
   lli t2, 118
   bne t0, t2,+
