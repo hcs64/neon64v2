@@ -55,7 +55,6 @@ Desired mappers:
 - 24 (VRC6a, Akumajou Densetsu)
 - 25 (VRC6b, Madara etc)
 - 68 (After Burner)
-- 69 (Sunsoft FME-7, Gimmick!, etc)
 
 Known bugs:
 * Profiling is wonky in PAL mode
@@ -67,6 +66,7 @@ Known bugs:
   - Some glitching in Mega Man 2 intro (check hw?)
   - No Namco 163 extra channels
   - No MMC5 extra channels
+  - No Sunsoft 5B extra channels
 
 * Crashes
   - Wally Bear and the No! Gang hangs on boot
