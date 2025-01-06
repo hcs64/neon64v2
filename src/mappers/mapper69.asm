@@ -214,7 +214,7 @@ CmdCHRBank:
 CmdMirror:
 // cpu_t0: value (mode)
   andi t0, cpu_t0, 0b11
-  sll t0, 4
+  sll t0, 2
   add t0, gp
   lw t0, mirror_mode_jump_table - gp_base (t0)
   la_gp(a0, ppu_ram + 0)
