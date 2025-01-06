@@ -158,7 +158,7 @@ Map4K_2:
   srl t0, a1, 12-6
   ori t0, (%011 << 3) | (1 << 2) | (1 << 1) | (1 << 0)
   mtc0 t0, EntryLo0
-// High page of pair,cached, writeable, valid, global
+// High page of pair, cached, writeable, valid, global
   srl t0, a2, 12-6
   ori t0, (%011 << 3) | (1 << 2) | (1 << 1) | (1 << 0)
   mtc0 t0, EntryLo1

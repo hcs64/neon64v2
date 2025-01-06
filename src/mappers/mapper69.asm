@@ -49,8 +49,7 @@ Init:
   sw t0, cpu_read_map + 0xc0 * 4 (t2)
   sw t0, cpu_read_map + 0xe0 * 4 (t2)
 
-// TODO set up PRGRAM
-  //sw a1, cpu_write_map + 0x60 * 4 (t2)
+  sw t0, cpu_write_map + 0x60 * 4 (t2)
   sw t1, cpu_write_map + 0x80 * 4 (t2)
   sw t4, cpu_write_map + 0xa0 * 4 (t2)
   sw a0, cpu_write_map + 0xc0 * 4 (t2)
@@ -59,7 +58,7 @@ Init:
   bnez t3,-
   addi t2, 4
 
-// Default the banks to 0
+// Init the pages to 0
   lli a1, 0
   jal SetPRGROMBank
   lli a0, 0
@@ -165,11 +164,18 @@ IRQCallback:
 
 CmdPRGBank0:
 // cpu_t0: value
-// TODO PRG RAM select/enable
-  andi a1, cpu_t0, 0b11'1111
-  j SetPRGROMBank
-  lli a0, 0
-  
+// t0: command (8)
+  andi t1, cpu_t0, 0b0100'0000
+  beqz t1, CmdPRGBank13
+// delay slot
+  ls_gp(lbu t3, sunsoft_prgrom_tlb_index)
+  ls_gp(lw a0, sunsoft_prgrom_vaddr)
+  la a1, nes_extra_ram
+
+// Tail call
+  j TLB.Map8K
+  mtc0 t3, Index
+
 CmdPRGBank13:
 // cpu_t0: value
 // t0: command (9-0xb)
@@ -193,6 +199,7 @@ SetPRGROMBank:
   sll a0, sunsoft_prgrom_page_shift
   add a0, t0
 
+// TODO: This should be forced read-only for bank 0
 // Tail call
   j TLB.Map8K
   mtc0 t3, Index
